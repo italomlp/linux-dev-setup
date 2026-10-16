@@ -20,7 +20,12 @@ setup_repo() {
       rm -f "$tmp"; APT_REFRESHED=0; refresh_apt;;
     warp)
       local path=/etc/apt/sources.list.d/linux-dev-setup-warp.list key=/etc/apt/keyrings/linux-dev-setup-warp.gpg
-      [[ -e $path ]] && return 0
+      # Warp's own installer commonly installs the same source and key under a
+      # different path. Reuse that source instead of creating a conflicting
+      # Signed-By entry for the same URI/suite.
+      if grep -RqsF 'https://releases.warp.dev/linux/deb' /etc/apt/sources.list.d /etc/apt/sources.list 2>/dev/null; then
+        return 0
+      fi
       local tmp; tmp=$(mktemp)
       curl -fsSL https://releases.warp.dev/linux/keys/warp.asc -o "$tmp"
       sudo install -d -m 755 /etc/apt/keyrings /etc/apt/sources.list.d
@@ -73,7 +78,9 @@ run_action() {
     apt) refresh_apt; sudo apt-get install -y "$arg";;
     repo) setup_repo "$arg";;
     repo-tools) refresh_apt; sudo apt-get install -y ca-certificates curl gnupg;;
-    flatpak) flatpak install --user -y flathub "$arg";;
+    flatpak)
+      flatpak install --user -y flathub "$arg" || return
+      flatpak info --user "$arg" >/dev/null 2>&1 || flatpak info "$arg" >/dev/null 2>&1;;
     flatpak-remote) flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo;;
     mise-tool) "$(command -v mise || printf '%s' "$HOME/.local/bin/mise")" use -g "$arg";;
     npm) "$(command -v mise || printf '%s' "$HOME/.local/bin/mise")" exec node@lts -- npm install -g "$arg";;

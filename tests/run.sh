@@ -73,6 +73,18 @@ export DS_TEST_OS_RELEASE="$TMP/mint"
 out=$(bash "$ROOT/install.sh" --module docker --dry-run)
 check derivative 'Manual intervention' "$out"
 [[ $out != *'Suites: wilma'* ]] || fail 'derivative used wrong suite'
+out=$(bash "$ROOT/install.sh" --module ai-agents --dry-run)
+check mint-chatgpt-base 'ChatGPT Desktop' "$out"
+[[ $out != *'does not list this distribution/version'* ]] || fail 'Mint was not mapped to Ubuntu base compatibility'
+out=$(ROOT="$ROOT" TMP="$TMP" bash -c '
+  source "$ROOT/lib/package-manager.sh"
+  repo_present() { [[ $1 == warp ]]; }
+  sudo() { printf "unexpected sudo\\n"; return 99; }
+  curl() { printf "unexpected curl\\n"; return 99; }
+  setup_repo warp
+')
+[[ -z $out ]] || fail 'Warp duplicated an existing upstream repository'
+printf 'ok - warp-existing-source\n'
 export DS_TEST_OS_RELEASE="$TMP/fedora"
 if bash "$ROOT/install.sh" --dry-run >"$TMP/out" 2>&1; then fail 'unsupported distribution accepted'; fi
 check unsupported 'Unsupported distribution' "$(cat "$TMP/out")"

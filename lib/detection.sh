@@ -20,6 +20,15 @@ detect_system() {
   fi
 }
 is_native_distro() { [[ $DISTRO == ubuntu || $DISTRO == debian ]]; }
+is_ubuntu_based() { [[ $DISTRO == ubuntu || ( -n ${UBUNTU_CODENAME:-} && $ID_LIKE == *ubuntu* ) || $DISTRO == linuxmint || $DISTRO == pop || $DISTRO == zorin ]]; }
+ubuntu_compat_version() {
+  case ${UBUNTU_CODENAME:-} in
+    jammy) printf '22.04';;
+    noble) printf '24.04';;
+    resolute) printf '26.04';;
+    *) [[ $DISTRO == ubuntu ]] && printf '%s' "$DISTRO_VERSION";;
+  esac
+}
 docker_engine_supported() {
   case "$DISTRO:$DISTRO_VERSION" in
     ubuntu:22.04|ubuntu:24.04|ubuntu:26.04|debian:12|debian:13) return 0;;

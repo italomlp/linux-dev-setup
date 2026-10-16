@@ -20,12 +20,12 @@ plan_ai_agents() {
   else plan_manual 'Antigravity CLI' 'Official Linux CLI installation exists; inspect https://codelabs.developers.google.com/antigravity-cli-hands-on and verify script before running'; fi
   if has_command claude-desktop || package_installed claude-desktop; then
     add_action installed 'Claude Desktop' none '' - 'Existing installation retained'
-  elif is_native_distro && { [[ $DISTRO == ubuntu && ( $DISTRO_VERSION == 22.04 || $DISTRO_VERSION == 24.04 || $DISTRO_VERSION == 26.04 ) ]] || [[ $DISTRO == debian && ( $DISTRO_VERSION == 12 || $DISTRO_VERSION == 13 ) ]]; }; then
+  elif { is_ubuntu_based && [[ $(ubuntu_compat_version) == 22.04 || $(ubuntu_compat_version) == 24.04 || $(ubuntu_compat_version) == 26.04 ]]; } || { [[ $DISTRO == debian && ( $DISTRO_VERSION == 12 || $DISTRO_VERSION == 13 ) ]]; }; then
     plan_repo_package 'Claude Desktop' claude-desktop claude-desktop claude-desktop
   else plan_manual 'Claude Desktop' 'Official Linux beta supports Ubuntu 22.04+ and Debian 12+; derivatives are not formally supported: https://support.claude.com/en/articles/10065433-install-claude-desktop'; fi
   if has_command chatgpt || package_installed chatgpt; then
     add_action installed 'ChatGPT Desktop' none '' - 'Existing installation retained'
-  elif [[ $DISTRO == ubuntu && ( $DISTRO_VERSION == 24.04 || $DISTRO_VERSION == 26.04 ) ]] || [[ $DISTRO == debian && $DISTRO_VERSION == 13 ]]; then
+  elif { is_ubuntu_based && [[ $(ubuntu_compat_version) == 24.04 || $(ubuntu_compat_version) == 26.04 ]]; } || [[ $DISTRO == debian && $DISTRO_VERSION == 13 ]]; then
     plan_manual 'ChatGPT Desktop' 'Official Linux preview .deb for x64: https://learn.chatgpt.com/docs/linux/linux-app; download and sudo apt install ./chatgpt_amd64.deb'
   else plan_manual 'ChatGPT Desktop' 'Official Linux preview does not list this distribution/version: https://learn.chatgpt.com/docs/linux/linux-app'; fi
 }

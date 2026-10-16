@@ -29,14 +29,14 @@ Crie os arquivos de distribuição com:
 bash scripts/package.sh --repo italomlp/linux-dev-setup
 ```
 
-O comando gera `dist/linux-dev-setup-v0.1.1.tar.gz`, seu `.sha256` e `dist/install.sh`, usando a versão em `VERSION`. O `install.sh` remoto baixa o pacote da mesma versão publicada, confere o SHA-256, extrai em um diretório temporário e inicia o instalador. O pacote contém os scripts, módulos, configuração e documentação necessários, sem exigir um clone do repositório. Sem `--repo`, o build gera apenas o pacote e o checksum. Para criar um release, faça commit, publique este projeto em um repositório GitHub e envie uma tag que corresponda ao `VERSION`:
+O comando gera `dist/linux-dev-setup-v0.1.2.tar.gz`, seu `.sha256` e `dist/install.sh`, usando a versão em `VERSION`. O `install.sh` remoto baixa o pacote da mesma versão publicada, confere o SHA-256, extrai em um diretório temporário e inicia o instalador. O pacote contém os scripts, módulos, configuração e documentação necessários, sem exigir um clone do repositório. Sem `--repo`, o build gera apenas o pacote e o checksum. Para criar um release, faça commit, publique este projeto em um repositório GitHub e envie uma tag que corresponda ao `VERSION`:
 
 ```bash
 git add .
-git commit -m "Prepare v0.1.1 release"
+git commit -m "Prepare v0.1.2 release"
 git push -u origin main
-git tag v0.1.1
-git push origin v0.1.1
+git tag v0.1.2
+git push origin v0.1.2
 ```
 
 O workflow em `.github/workflows/release.yml` roda os testes, monta o pacote com o nome real do repositório e publica os três arquivos no GitHub Release. Para novas versões, altere `VERSION`, faça commit e crie uma tag correspondente. Se preferir publicar manualmente, carregue os três arquivos de `dist/` como assets do release.
