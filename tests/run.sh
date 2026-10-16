@@ -23,6 +23,7 @@ VERSION_ID=42
 ID_LIKE="rhel fedora"
 EOF
 export DS_TEST_MODE=1 DS_TEST_ARCH=x86_64 HOME="$TMP/home" XDG_CONFIG_HOME="$TMP/home/.config"
+unset ANDROID_HOME ANDROID_SDK_ROOT
 export DS_TEST_FORCE_MISSING=lazygit,zellij,starship,zsh,zsh-autosuggestions,zsh-syntax-highlighting,docker,docker-desktop,docker-ce,docker.io,containerd,runc,podman-docker,agy,agy-ide,antigravity-ide,claude-desktop,chatgpt,ollama,llama-cli,vivaldi,vivaldi-stable,google-chrome,google-chrome-stable,tailscale
 export DS_TEST_IGNORE_REPOS=1
 if [[ -e /etc/apt/sources.list.d/claude-desktop.list && -e /etc/apt/sources.list.d/linux-dev-setup-claude-desktop.list ]]; then

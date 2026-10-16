@@ -29,17 +29,17 @@ Crie os arquivos de distribuição com:
 bash scripts/package.sh --repo italomlp/linux-dev-setup
 ```
 
-O comando gera `dist/linux-dev-setup-v0.1.5.tar.gz`, seu `.sha256` e `dist/install.sh`, usando a versão em `VERSION`. O `install.sh` remoto baixa o pacote da mesma versão publicada, confere o SHA-256, extrai em um diretório temporário e inicia o instalador. O pacote contém os scripts, módulos, configuração e documentação necessários, sem exigir um clone do repositório. Sem `--repo`, o build gera apenas o pacote e o checksum. Para criar um release, faça commit, publique este projeto em um repositório GitHub e envie uma tag que corresponda ao `VERSION`:
+O comando gera `dist/linux-dev-setup-v0.1.6.tar.gz`, seu `.sha256` e `dist/install.sh`, usando a versão em `VERSION`. O `install.sh` remoto baixa o pacote da mesma versão publicada, confere o SHA-256, extrai em um diretório temporário e inicia o instalador. O pacote contém os scripts, módulos, configuração e documentação necessários, sem exigir um clone do repositório. Sem `--repo`, o build gera apenas o pacote e o checksum. Para criar um release, faça commit, publique este projeto em um repositório GitHub e envie uma tag que corresponda ao `VERSION`:
 
 ```bash
 git add .
-git commit -m "Prepare v0.1.5 release"
+git commit -m "Prepare v0.1.6 release"
 git push -u origin main
-git tag v0.1.5
-git push origin v0.1.5
+git tag v0.1.6
+git push origin v0.1.6
 ```
 
-O workflow em `.github/workflows/release.yml` roda os testes, monta o pacote com o nome real do repositório e publica os três arquivos no GitHub Release. Para novas versões, altere `VERSION`, faça commit e crie uma tag correspondente. Se preferir publicar manualmente, carregue os três arquivos de `dist/` como assets do release.
+O workflow em `.github/workflows/release.yml` roda os testes e monta o pacote a cada push em `main`. Ao enviar uma tag correspondente a `VERSION`, ele publica os três arquivos no GitHub Release. Para novas versões, altere `VERSION`, faça commit, confirme que o workflow passou em `main` e crie a tag. Se preferir publicar manualmente, carregue os três arquivos de `dist/` como assets do release.
 
 Depois de publicado, o comando de uma linha usa o `install.sh` do release mais recente:
 
@@ -53,7 +53,7 @@ Em outra máquina Linux, também é possível baixar o release manualmente:
 
 ```bash
 REPO=italomlp/linux-dev-setup
-VERSION=v0.1.5
+VERSION=v0.1.6
 curl -fLO "https://github.com/$REPO/releases/download/$VERSION/linux-dev-setup-$VERSION.tar.gz"
 curl -fLO "https://github.com/$REPO/releases/download/$VERSION/linux-dev-setup-$VERSION.tar.gz.sha256"
 sha256sum -c "linux-dev-setup-$VERSION.tar.gz.sha256"
