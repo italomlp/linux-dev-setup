@@ -23,7 +23,7 @@ setup_repo() {
       # Warp's own installer commonly installs the same source and key under a
       # different path. Reuse that source instead of creating a conflicting
       # Signed-By entry for the same URI/suite.
-      if grep -RqsF 'https://releases.warp.dev/linux/deb' /etc/apt/sources.list.d /etc/apt/sources.list 2>/dev/null; then
+      if repo_present warp; then
         return 0
       fi
       local tmp; tmp=$(mktemp)

@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 repo='italomlp/linux-dev-setup'
-version='v0.1.2'
+version='v0.1.3'
 package="linux-dev-setup-$version"
 base="https://github.com/$repo/releases/download/$version"
 
