@@ -16,6 +16,13 @@ printf '\nVulkan:\n'
 if command -v vulkaninfo >/dev/null 2>&1; then vulkaninfo --summary 2>&1 || true
 else printf '  vulkaninfo unavailable (install vulkan-tools)\n'; fi
 printf '\nKVM:\n'
+if grep -qw svm /proc/cpuinfo; then printf '  CPU flag: svm (AMD virtualization exposed)\n'
+elif grep -qw vmx /proc/cpuinfo; then printf '  CPU flag: vmx (Intel virtualization exposed)\n'
+else printf '  CPU virtualization flag svm/vmx is not exposed to Linux; check firmware or nested virtualization\n'; fi
+if command -v lsmod >/dev/null 2>&1; then
+  modules=$(lsmod | awk '$1 == "kvm" || $1 == "kvm_amd" || $1 == "kvm_intel" {print $1}')
+  printf '  Loaded modules: %s\n' "${modules:-none}"
+fi
 if [[ -e /dev/kvm ]]; then
   ls -l /dev/kvm
   [[ -r /dev/kvm && -w /dev/kvm ]] && printf '  Current user can access KVM\n' || printf '  Current user lacks KVM read/write access\n'

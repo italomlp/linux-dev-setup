@@ -43,6 +43,13 @@ for name in "${SELECTED[@]}"; do
   (( valid )) || { echo "Unknown module: $name" >&2; exit 2; }
 done
 detect_system
+if [[ ${DS_TEST_MODE:-0} != 1 && -e /etc/apt/sources.list.d/claude-desktop.list && -e /etc/apt/sources.list.d/linux-dev-setup-claude-desktop.list ]]; then
+  APT_SOURCE_PARTS_OVERRIDE=$(mktemp -d)
+  trap 'rm -rf "$APT_SOURCE_PARTS_OVERRIDE"' EXIT
+  cp -a /etc/apt/sources.list.d/. "$APT_SOURCE_PARTS_OVERRIDE/"
+  rm -f "$APT_SOURCE_PARTS_OVERRIDE/linux-dev-setup-claude-desktop.list"
+  add_action configure 'Claude Desktop repository repair' claude-repo-repair '' - 'remove duplicate installer APT source; retain package-managed source'
+fi
 for name in "${SELECTED[@]}"; do
   source "$ROOT/modules/$name.sh"
   "plan_${name//-/_}"

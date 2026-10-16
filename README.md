@@ -19,7 +19,7 @@ Sem argumentos, o script faz dry-run de todos os módulos. Com `--interactive`, 
 
 Módulos: `system`, `terminal`, `javascript`, `docker`, `editors`, `ai-agents`, `local-llms`, `android`, `applications`, `productivity`.
 
-`config/settings.conf` permite desligar Docker Desktop ou Flatpak com `INSTALL_DOCKER_DESKTOP=0` e `INSTALL_FLATPAK=0`. `config/packages.conf` lista os pacotes essenciais. No módulo `ai-agents`, a dependência mise/Node é planejada automaticamente se estiver ausente.
+`config/settings.conf` permite desligar Docker Desktop ou Flatpak com `INSTALL_DOCKER_DESKTOP=0` e `INSTALL_FLATPAK=0`. Docker Engine é apenas um fallback explícito: `INSTALL_DOCKER_ENGINE_FALLBACK=1` quando KVM não está disponível. `config/packages.conf` lista os pacotes essenciais. No módulo `ai-agents`, a dependência mise/Node é planejada automaticamente se estiver ausente.
 
 ## Pacote para GitHub Releases
 
@@ -29,14 +29,14 @@ Crie os arquivos de distribuição com:
 bash scripts/package.sh --repo italomlp/linux-dev-setup
 ```
 
-O comando gera `dist/linux-dev-setup-v0.1.3.tar.gz`, seu `.sha256` e `dist/install.sh`, usando a versão em `VERSION`. O `install.sh` remoto baixa o pacote da mesma versão publicada, confere o SHA-256, extrai em um diretório temporário e inicia o instalador. O pacote contém os scripts, módulos, configuração e documentação necessários, sem exigir um clone do repositório. Sem `--repo`, o build gera apenas o pacote e o checksum. Para criar um release, faça commit, publique este projeto em um repositório GitHub e envie uma tag que corresponda ao `VERSION`:
+O comando gera `dist/linux-dev-setup-v0.1.4.tar.gz`, seu `.sha256` e `dist/install.sh`, usando a versão em `VERSION`. O `install.sh` remoto baixa o pacote da mesma versão publicada, confere o SHA-256, extrai em um diretório temporário e inicia o instalador. O pacote contém os scripts, módulos, configuração e documentação necessários, sem exigir um clone do repositório. Sem `--repo`, o build gera apenas o pacote e o checksum. Para criar um release, faça commit, publique este projeto em um repositório GitHub e envie uma tag que corresponda ao `VERSION`:
 
 ```bash
 git add .
-git commit -m "Prepare v0.1.3 release"
+git commit -m "Prepare v0.1.4 release"
 git push -u origin main
-git tag v0.1.3
-git push origin v0.1.3
+git tag v0.1.4
+git push origin v0.1.4
 ```
 
 O workflow em `.github/workflows/release.yml` roda os testes, monta o pacote com o nome real do repositório e publica os três arquivos no GitHub Release. Para novas versões, altere `VERSION`, faça commit e crie uma tag correspondente. Se preferir publicar manualmente, carregue os três arquivos de `dist/` como assets do release.
@@ -53,7 +53,7 @@ Em outra máquina Linux, também é possível baixar o release manualmente:
 
 ```bash
 REPO=italomlp/linux-dev-setup
-VERSION=v0.1.1
+VERSION=v0.1.4
 curl -fLO "https://github.com/$REPO/releases/download/$VERSION/linux-dev-setup-$VERSION.tar.gz"
 curl -fLO "https://github.com/$REPO/releases/download/$VERSION/linux-dev-setup-$VERSION.tar.gz.sha256"
 sha256sum -c "linux-dev-setup-$VERSION.tar.gz.sha256"
@@ -74,24 +74,29 @@ Will install:
       operation: mise use -g node@lts
 
 Manual intervention:
-  - Docker Desktop — Requires supported release and KVM; see official instructions
+  - Android Studio Setup Wizard — Complete first-run setup and accept SDK licenses
 ```
 
-As categorias `Already installed`, `Will install`, `Will configure`, `Skipped` e `Manual intervention` aparecem conforme o estado encontrado. `Will update` e `Unsupported` são reservadas para futuras operações; a versão atual não atualiza aplicativos já instalados nem remove pacotes. O dry-run do instalador local não cria logs, dotfiles, caches ou repositórios e não faz acesso à rede. O método remoto precisa baixar e verificar o pacote antes de iniciar esse dry-run. Consultas locais como `dpkg-query`, `apt-cache`, `command -v` e `flatpak info` são usadas para detectar o estado.
+As categorias `Already installed`, `Will install`, `Will configure`, `Skipped`, `Manual intervention` e `Notes` aparecem conforme o estado encontrado. `Will update` e `Unsupported` são reservadas para futuras operações; a versão atual não atualiza aplicativos já instalados nem remove pacotes. O dry-run do instalador local não cria logs, dotfiles, caches ou repositórios e não faz acesso à rede. O método remoto precisa baixar e verificar o pacote antes de iniciar esse dry-run. Consultas locais como `dpkg-query`, `apt-cache`, `command -v` e `flatpak info` são usadas para detectar o estado.
 
 ## O que é automatizado
 
 - Pacotes disponíveis nos repositórios APT já configurados, inclusive ferramentas essenciais e utilitários do desktop.
-- Repositórios assinados do GitHub CLI, Warp, Claude Desktop e Docker Engine em sistemas oficialmente suportados.
+- Repositórios assinados do GitHub CLI, Warp, Claude Desktop, Docker, Vivaldi, Chrome, Tailscale, DBeaver e Bruno quando compatíveis.
 - mise via `extrepo`, Node LTS, pnpm e Bun via mise; CLIs de IA via npm executado pelo Node do mise.
 - Flatpak e o remoto Flathub do usuário; Zen Browser pelo ID oficial `app.zen_browser.zen`.
 - Blocos limitados para Zsh, Bash e Android em arquivos do usuário, com cópia de segurança antes de alterar arquivos existentes.
+- Downloads oficiais e verificados de Slack, Docker Desktop, Android Studio, Lazygit, Zellij, Starship, Antigravity IDE/CLI, ChatGPT Desktop, Ollama e llama.cpp. O instalador verifica assinaturas ou checksums publicados quando disponíveis; Antigravity IDE e ChatGPT Desktop não publicam checksum nessas páginas e são baixados por HTTPS com validação do formato.
 
 As escolhas por ferramenta e links oficiais estão em [docs/tooling.md](docs/tooling.md). O script não atualiza uma instalação existente por conta própria. Reexecute para instalar componentes que faltavam; para atualização, use o gerenciador que instalou cada ferramenta.
 
 ## Etapas manuais
 
-O plano registra ações manuais para artefatos cujo URL/checksum oficial muda, aceites de licença, login ou mudanças que dependem do hardware e da configuração atual. Entre elas: Docker Desktop, ChatGPT Desktop, Antigravity, Android Studio/SDK, Ollama, llama.cpp, Chrome, Vivaldi, Tailscale e snapshots. Isso evita executar um instalador remoto sem verificação ou adivinhar um pacote de distribuição. Os links oficiais e comandos sugeridos aparecem no plano.
+Docker Desktop baixa o `.deb` e `checksums.txt` da versão mais recente nas notas oficiais, confere SHA-256, configura o repositório APT e instala. Para usar um arquivo já baixado, `DOCKER_DESKTOP_DEB` e `DOCKER_DESKTOP_SHA256` ainda podem ser informados. Se a CPU expõe `svm` ou `vmx` mas `/dev/kvm` falta, o plano carrega os módulos KVM com `sudo modprobe` e verifica o dispositivo. Se for preciso adicionar seu usuário ao grupo `kvm`, encerre a sessão e entre novamente antes de repetir o instalador. Quando `svm`/`vmx` não é exposto ao Linux, habilite SVM/AMD-V ou VT-x no firmware, reinicie e repita `./diagnose.sh`; o script não pode alterar o firmware. O Engine usa a suite Ubuntu `noble` somente após opt-in explícito e quando não há Desktop nem KVM. Docker Desktop cria o contexto `desktop-linux`, separado de `default`.
+
+Android Studio baixa automaticamente o tarball Linux e o SHA-256 publicados pelo Google. Depois complete o Setup Wizard, instale SDK Platform Tools e Android SDK Command-line Tools no SDK Manager e aceite as licenças. Uma nova execução detecta `ANDROID_HOME`, `ANDROID_SDK_ROOT` ou `~/Android/Sdk`, configurando `~/.profile` para o SDK encontrado. ADB não é instalado por APT. Para um arquivo já baixado, use `ANDROID_STUDIO_TARBALL` e `ANDROID_STUDIO_SHA256`.
+
+O módulo Terminal atualiza o bloco gerenciado de `~/.zshrc` com backup, mantendo a configuração externa. Em execução interativa, `chsh` pode solicitar senha; em execução sem terminal, a mudança de shell fica como etapa manual. Um novo login aplica o shell padrão.
 
 Docker Desktop usa o contexto `desktop-linux` e imagens/volumes separados do Engine nativo (`default`). Antes de usar os dois, confira `docker context ls`. Não há parada automática de daemons, alteração de portas, volumes, diretório de dados ou inclusão automática no grupo `docker`. O grupo `docker` dá privilégios equivalentes a root; a decisão deve ser consciente.
 
@@ -107,7 +112,7 @@ vulkaninfo --summary
 java -version && adb version
 ```
 
-Para Docker Engine: `sudo docker info`. Para Desktop, inicie o aplicativo, aceite os termos, então use `docker context use desktop-linux` e `docker info`. Para Ollama: depois de carregar voluntariamente um modelo, use `ollama ps` e examine o processador. Para llama.cpp: execute `llama-cli --list-devices` após compilá-lo com Vulkan. Nenhum modelo é baixado pelo instalador.
+Para Docker Engine: `sudo docker info`. Para Desktop, inicie o aplicativo, aceite os termos, então use `docker context use desktop-linux` e `docker info`. Para Ollama: depois de carregar voluntariamente um modelo, use `ollama ps` e examine o processador. O instalador baixa o pacote base e configura o serviço, sem pacote ROCm nem modelos. Para llama.cpp, ele usa o release Ubuntu Vulkan verificado; execute `llama-cli --list-devices`. Nenhum modelo é baixado pelo instalador.
 
 `./diagnose.sh` reúne GPU, VRAM (quando exposta por sysfs), Vulkan, KVM, backends locais e contextos Docker em uma consulta somente leitura.
 
@@ -119,9 +124,9 @@ for file in install.sh diagnose.sh scripts/*.sh scripts/*.in lib/*.sh modules/*.
 shellcheck install.sh lib/*.sh modules/*.sh tests/run.sh
 ```
 
-Os testes usam metadados falsos de distribuição e cobrem parser, módulos, dry-run e distribuição não suportada. Não instalam pacotes. A execução real ainda precisa ser verificada em uma VM ou instalação Linux correspondente; este projeto foi escrito em macOS, sem executar alterações APT/Flatpak reais.
+Os testes usam metadados falsos de distribuição e cobrem parser, módulos, dry-run e distribuição não suportada. Não instalam pacotes. O dry-run e parte das instalações reais foram verificados no Linux Mint 22.3; outros ambientes ainda exigem verificação própria.
 
-Suporte de terceiros não é igual a suporte da distribuição: Docker não testa derivados Ubuntu/Debian; por isso o script não configura automaticamente o repositório Docker neles. Ghostty usa o pacote Ubuntu oficial somente quando disponível no Ubuntu 26.04. `apt-cache` sem índices atualizados pode classificar um pacote como manual; execute `sudo apt-get update` fora do instalador e repita o dry-run. O instalador não modifica partições, bootloader, Btrfs, drivers, configurações do Warp/Ghostty/Antigravity ou navegador padrão. Ele não inicia serviços explicitamente; pacotes APT podem ativar serviços durante a instalação.
+Suporte de terceiros não é igual a suporte da distribuição: no Linux Mint, o script usa o repositório Docker para a versão Ubuntu base, embora Docker não teste derivados Ubuntu/Debian. Ghostty usa o pacote Ubuntu oficial somente quando disponível no Ubuntu 26.04. `apt-cache` sem índices atualizados pode classificar um pacote como manual; execute `sudo apt-get update` fora do instalador e repita o dry-run. O instalador não modifica partições, bootloader, Btrfs, drivers, configurações do Warp/Ghostty/Antigravity ou navegador padrão. Ele não inicia serviços explicitamente; pacotes APT podem ativar serviços durante a instalação.
 
 ## Manutenção
 

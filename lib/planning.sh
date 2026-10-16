@@ -20,6 +20,14 @@ plan_apt() {
     add_action manual "$title" none "$package" - 'No APT candidate in current repositories; check distribution support'
   fi
 }
+plan_known_apt() {
+  local title=$1 package=$2 binary=${3:-}
+  if { [[ -n $binary ]] && has_command "$binary"; } || package_installed "$package"; then
+    add_action installed "$title" none "${binary:-$package}" - 'Existing installation retained'
+  else
+    add_action install "$title" apt "$package" - 'sudo apt-get install'
+  fi
+}
 ensure_repo_tools_planned() {
   local i
   for i in "${!ACTION_TYPE[@]}"; do
@@ -29,6 +37,7 @@ ensure_repo_tools_planned() {
   add_action install 'APT repository prerequisites' repo-tools '' - 'sudo apt-get install ca-certificates curl gnupg'
 }
 plan_manual() { add_action manual "$1" none '' - "$2"; }
+plan_note() { add_action note "$1" none '' - "$2"; }
 plan_flatpak() {
   local title=$1 app=$2
   if flatpak_installed "$app"; then add_action installed "$title" none "$app" - 'Flatpak already installed'
@@ -58,6 +67,8 @@ describe_action() {
     apt) printf 'sudo apt-get update; sudo apt-get install -y %q' "$arg";;
     repo) printf 'configure signed %s APT repository (sudo)' "$arg";;
     repo-tools) printf 'sudo apt-get install -y ca-certificates curl gnupg';;
+    slack-signature) printf 'configure Slack debsig verification key and policy';;
+    slack-deb) printf 'download official Slack .deb, verify package signature, install with APT';;
     flatpak) printf 'flatpak install --user -y flathub %q' "$arg";;
     flatpak-remote) printf 'flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo';;
     mise-tool) printf 'mise use -g %q' "$arg";;
@@ -65,13 +76,26 @@ describe_action() {
     shell-zsh) printf 'backup and append managed block to ~/.zshrc';;
     shell-bash) printf 'backup and append managed block to ~/.bashrc';;
     android-env) printf 'backup and append managed block to ~/.profile';;
+    android-studio) if [[ $arg == auto ]]; then printf 'download Google Linux tarball and published SHA-256; verify; launch Setup Wizard'; else printf 'verify SHA-256 and extract Android Studio tarball; launch Setup Wizard'; fi;;
+    docker-desktop) if [[ $arg == auto ]]; then printf 'download official .deb and checksum; verify SHA-256; sudo apt-get install'; else printf 'verify SHA-256 and sudo apt-get install official Docker Desktop .deb'; fi;;
+    login-zsh) printf 'chsh -s %q (interactive)' "$arg";;
+    release-tar) printf 'verify official archive SHA-256 and install %q in ~/.local/bin' "${arg%%:*}";;
+    github-release-tar) printf 'download official %q release and verify GitHub SHA-256 digest' "$arg";;
+    chatgpt-deb) printf 'download official ChatGPT .deb over HTTPS; inspect package; sudo apt-get install';;
+    claude-repo-repair) printf 'remove duplicate installer Claude APT source; refresh APT';;
+    antigravity-ide) printf 'download official Antigravity IDE Linux tarball over HTTPS and install for user';;
+    antigravity-cli) printf 'download Antigravity CLI and verify vendor SHA-512 manifest';;
+    llama-vulkan) printf 'download official Ubuntu Vulkan release and verify GitHub SHA-256 digest';;
+    ollama-release) printf 'download official Linux archive, verify GitHub SHA-256 digest, install systemd service';;
+    gpu-check) printf 'vulkaninfo --summary; llama-cli --list-devices';;
+    kvm-setup) printf 'sudo modprobe kvm and %q; verify /dev/kvm; configure kvm group access' "$arg";;
   esac
 }
 print_plan() {
   local i status label
   printf 'System: %s %s | base: %s | architecture: %s | desktop: %s\n' "$DISTRO" "$DISTRO_VERSION" "${BASE_CODENAME:-unknown}" "$ARCH" "$DESKTOP"
-  for status in installed install update configure skipped unsupported manual; do
-    case $status in installed) label='Already installed';; install) label='Will install';; update) label='Will update';; configure) label='Will configure';; skipped) label='Skipped';; unsupported) label='Unsupported';; manual) label='Manual intervention';; esac
+  for status in installed install update configure skipped unsupported manual note; do
+    case $status in installed) label='Already installed';; install) label='Will install';; update) label='Will update';; configure) label='Will configure';; skipped) label='Skipped';; unsupported) label='Unsupported';; manual) label='Manual intervention';; note) label='Notes';; esac
     local count=0
     printf '\n%s:\n' "$label"
     for i in "${!ACTION_STATUS[@]}"; do

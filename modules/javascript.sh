@@ -28,5 +28,5 @@ plan_javascript() {
   if [[ -f $HOME/.bashrc ]] && grep -Fq '# linux-dev-setup managed block' "$HOME/.bashrc"; then
     add_action installed 'Bash mise activation' none '' - 'Managed block exists'
   else add_action configure 'Bash mise activation' shell-bash '' - 'Backup existing ~/.bashrc and append activation'; fi
-  plan_manual TypeScript 'Use project-local dev dependency: pnpm add -D typescript'
+  plan_note TypeScript 'Use project-local dev dependency: pnpm add -D typescript'
 }

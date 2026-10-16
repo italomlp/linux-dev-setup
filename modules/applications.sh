@@ -18,9 +18,22 @@ plan_applications() {
     else add_action install 'Zen Browser' flatpak app.zen_browser.zen "$flathub_dep" 'Official Flathub package; user installation'; fi
   else add_action skipped 'Zen Browser Flatpak' none '' - 'Flatpak disabled in settings'; fi
   if has_command vivaldi || package_installed vivaldi-stable; then add_action installed Vivaldi none '' - 'Existing installation retained'
-  else plan_manual Vivaldi 'Official .deb configures signed update repository; https://vivaldi.com/download/'; fi
+  else plan_repo_package Vivaldi vivaldi-stable vivaldi vivaldi; fi
   if has_command google-chrome || package_installed google-chrome-stable; then add_action installed 'Google Chrome' none '' - 'Existing installation retained'
-  else plan_manual 'Google Chrome' 'Official 64-bit .deb: https://www.google.com/chrome/'; fi
+  else plan_repo_package 'Google Chrome' google-chrome-stable google-chrome google-chrome; fi
   if has_command tailscale; then add_action installed Tailscale none '' - 'Existing installation retained; authentication stays manual'
-  else plan_manual Tailscale 'Use official stable APT instructions for this distribution: https://tailscale.com/docs/install/linux'; fi
+  else plan_repo_package Tailscale tailscale tailscale tailscale; fi
+  if has_command dbeaver || package_installed dbeaver-ce; then add_action installed DBeaver none dbeaver - 'Existing installation retained'
+  else plan_repo_package DBeaver dbeaver-ce dbeaver dbeaver; fi
+  if has_command bruno || package_installed bruno; then add_action installed Bruno none bruno - 'Existing installation retained'
+  else plan_repo_package Bruno bruno bruno bruno; fi
+  if has_command slack || package_installed slack-desktop; then add_action installed Slack none slack - 'Existing installation retained'
+  else
+    plan_known_apt 'Slack signature verifier' debsig-verify debsig-verify
+    local slack_sig_dep=-
+    if [[ ${ACTION_STATUS[-1]} == install ]]; then slack_sig_dep=$((${#ACTION_TYPE[@]}-1)); fi
+    add_action configure 'Slack package signature policy' slack-signature '' "$slack_sig_dep" 'install Slack signing key and debsig policy'
+    local slack_policy_dep=$((${#ACTION_TYPE[@]}-1))
+    add_action install Slack slack-deb '' "$slack_policy_dep" 'download official .deb, verify Slack signature, install with APT'
+  fi
 }
