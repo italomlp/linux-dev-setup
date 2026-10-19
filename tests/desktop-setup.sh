@@ -39,6 +39,14 @@ EOF
 chmod +x "$TMP/vendor-bin/apt-cache"
 out=$(PATH="$TMP/vendor-bin:$PATH" ROOT="$ROOT" APT_SOURCE_DIR="$TMP/apt" bash -c 'set -o pipefail; source "$ROOT/lib/detection.sh"; vendor_repo_valid google-chrome && vendor_repo_valid vivaldi && echo valid')
 check vendor-source-validation "$out" valid
+cat > "$TMP/vendor-bin/apt-cache" <<'EOF'
+#!/usr/bin/env bash
+printf 'Candidate: 1.0\n'
+awk 'BEGIN {for (i=0; i<10000; i++) print "unrelated package metadata"}'
+EOF
+chmod +x "$TMP/vendor-bin/apt-cache"
+out=$(PATH="$TMP/vendor-bin:$PATH" ROOT="$ROOT" bash -c 'set -o pipefail; source "$ROOT/lib/detection.sh"; package_candidate example && echo candidate' || true)
+check apt-candidate-with-long-policy "$out" candidate
 out=$(ROOT="$ROOT" APT_SOURCE_DIR="$TMP/apt" bash -c 'source "$ROOT/lib/detection.sh"; source "$ROOT/lib/planning.sh"; source "$ROOT/lib/package-manager.sh"; source "$ROOT/modules/applications.sh"; vendor_repo_valid() { [[ $1 == google-chrome || $1 == vivaldi ]]; }; plan_browser_repo_cleanup; printf "%s\n" "${ACTION_TITLE[@]}"')
 check browser-cleanup-plan "$out" 'Google Chrome repository cleanup'
 check browser-cleanup-vivaldi "$out" 'Vivaldi repository cleanup'

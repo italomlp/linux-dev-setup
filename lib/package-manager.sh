@@ -506,6 +506,7 @@ EOF
 }
 execute_plan() {
   local i failed=0 completed=0 skipped=0 dep
+  if declare -F ui_heading >/dev/null; then ui_heading 'Linux Dev Setup' 'Execution progress'; fi
   for i in "${!ACTION_TYPE[@]}"; do
     [[ ${ACTION_STATUS[i]} == install || ${ACTION_STATUS[i]} == configure ]] || continue
     dep=${ACTION_DEP[i]}
@@ -524,6 +525,14 @@ execute_plan() {
       fi
     fi
   done
-  printf '\nSummary: %d completed, %d failed, %d skipped.\n' "$completed" "$failed" "$skipped"
+  if declare -F ui_badge >/dev/null; then
+    ui_subheading Summary
+    printf '  '; ui_badge ok "$completed completed"
+    printf '  '; ui_badge fail "$failed failed"
+    printf '  '; ui_badge skipped "$skipped skipped"
+    printf '\n'
+  else
+    printf '\nSummary: %d completed, %d failed, %d skipped.\n' "$completed" "$failed" "$skipped"
+  fi
   (( failed == 0 ))
 }

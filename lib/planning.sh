@@ -95,23 +95,27 @@ describe_action() {
   esac
 }
 print_plan() {
-  local i status label
+  local i status label count mode
+  mode='Installation plan'
+  [[ ${DRY_RUN:-0} != 1 ]] || mode='Dry run'
+  ui_heading 'Linux Dev Setup' "$mode"
   printf 'System: %s %s | base: %s | architecture: %s | desktop: %s\n' "$DISTRO" "$DISTRO_VERSION" "${BASE_CODENAME:-unknown}" "$ARCH" "$DESKTOP"
+  printf 'Modules: %s\n' "${SELECTED[*]}"
   for status in installed install update configure skipped unsupported manual note; do
     case $status in installed) label='Already installed';; install) label='Will install';; update) label='Will update';; configure) label='Will configure';; skipped) label='Skipped';; unsupported) label='Unsupported';; manual) label='Manual intervention';; note) label='Notes';; esac
-    local count=0
-    printf '\n%s:\n' "$label"
+    count=0
+    for i in "${!ACTION_STATUS[@]}"; do [[ ${ACTION_STATUS[i]} != "$status" ]] || ((count+=1)); done
+    (( count > 0 )) || continue
+    ui_section "$status" "$label" "$count"
     for i in "${!ACTION_STATUS[@]}"; do
       [[ ${ACTION_STATUS[i]} == "$status" ]] || continue
-      printf '  - %s' "${ACTION_TITLE[i]}"
+      printf '  - '; ui_style "$status" "${ACTION_TITLE[i]}"
       [[ -z ${ACTION_NOTE[i]} ]] || printf ' — %s' "${ACTION_NOTE[i]}"
       printf '\n'
       if [[ $status == install || $status == configure ]]; then
         printf '      operation: '; describe_action "${ACTION_TYPE[i]}" "${ACTION_ARG[i]}"; printf '\n'
       fi
-      ((count+=1))
     done
-    if (( count == 0 )); then printf '  (none)\n'; fi
   done
   printf '\nPrivilege/restart: APT and repository actions request sudo; no action reboots the system. Shell/group changes may require a new login session.\n'
 }

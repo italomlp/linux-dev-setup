@@ -398,4 +398,5 @@ if cat "$TMP/dist/install.sh" | PATH="$TMP/bin:$PATH" MOCK_CORRUPT=1 bash -s -- 
 fi
 check bootstrap-checksum 'FAILED' "$(cat "$TMP/out")"
 bash "$ROOT/tests/desktop-setup.sh"
+bash "$ROOT/tests/ui.sh"
 printf 'All tests passed\n'

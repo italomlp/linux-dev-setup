@@ -2,6 +2,8 @@
 set -Eeuo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+source "$ROOT/lib/ui.sh"
+ui_init
 OUTPUT="$ROOT/dist"
 REPO=''
 
@@ -31,6 +33,7 @@ done
 
 version=$(<"$ROOT/VERSION")
 [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Invalid VERSION: $version" >&2; exit 2; }
+ui_heading 'Linux Dev Setup' "Package build · v$version"
 if [[ -n $REPO ]]; then
   [[ $REPO =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || { echo "Invalid GitHub repository: $REPO" >&2; exit 2; }
 fi
@@ -63,12 +66,13 @@ if command -v sha256sum >/dev/null 2>&1; then
 else
   (cd "$OUTPUT" && shasum -a 256 "$(basename "$archive")") > "$archive.sha256"
 fi
-printf 'Created %s\nCreated %s\n' "$archive" "$archive.sha256"
+ui_badge ok created; printf ' %s\n' "$archive"
+ui_badge ok created; printf ' %s\n' "$archive.sha256"
 if [[ -n $REPO ]]; then
   bootstrap=$(<"$ROOT/scripts/bootstrap.sh.in")
   bootstrap=${bootstrap//@GITHUB_REPO@/$REPO}
   bootstrap=${bootstrap//@VERSION@/$version}
   printf '%s\n' "$bootstrap" > "$OUTPUT/install.sh"
   chmod 755 "$OUTPUT/install.sh"
-  printf 'Created %s\n' "$OUTPUT/install.sh"
+  ui_badge ok created; printf ' %s\n' "$OUTPUT/install.sh"
 fi

@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+source "$ROOT/lib/ui.sh"
+ui_init
 id=${1:-}
+ui_heading 'Linux Dev Setup' "First-run setup · $id"
 case $id in
   gh) echo 'GitHub CLI: checking authentication.'; gh auth status || gh auth login --web;;
   claude) echo 'Claude Code: checking authentication.'; claude auth status || claude auth login;;
@@ -16,5 +19,5 @@ case $id in
   restic) echo 'Restic: choose a backup destination and retention policy before initializing a repository.';;
   *) echo "Unknown checklist item: $id" >&2; exit 2;;
 esac
-printf '\nPress Enter to close this terminal... '
+printf '\n'; ui_style heading 'Press Enter to close this terminal... '
 IFS= read -r _ || true

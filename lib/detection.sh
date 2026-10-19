@@ -40,11 +40,13 @@ has_command() { ! test_force_missing "$1" && command -v "$1" >/dev/null 2>&1; }
 package_installed() { ! test_force_missing "$1" && dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -qx 'install ok installed'; }
 package_version() { dpkg-query -W -f='${Version}' "$1" 2>/dev/null || true; }
 package_candidate() {
+  local policy
   if [[ -n ${APT_SOURCE_PARTS_OVERRIDE:-} ]]; then
-    apt-cache -o "Dir::Etc::sourceparts=$APT_SOURCE_PARTS_OVERRIDE" policy "$1" 2>/dev/null | grep -Eq 'Candidate: [^ (]'
+    policy=$(apt-cache -o "Dir::Etc::sourceparts=$APT_SOURCE_PARTS_OVERRIDE" policy "$1" 2>/dev/null) || return 1
   else
-    apt-cache policy "$1" 2>/dev/null | grep -Eq 'Candidate: [^ (]'
+    policy=$(apt-cache policy "$1" 2>/dev/null) || return 1
   fi
+  grep -Eq 'Candidate: [^ (]' <<< "$policy"
 }
 flatpak_installed() { has_command flatpak && flatpak info "$1" >/dev/null 2>&1; }
 has_kvm() {

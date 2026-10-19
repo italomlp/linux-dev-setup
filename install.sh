@@ -4,6 +4,8 @@ ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 source "$ROOT/lib/detection.sh"
 source "$ROOT/lib/planning.sh"
 source "$ROOT/lib/logging.sh"
+source "$ROOT/lib/ui.sh"
+ui_init
 source "$ROOT/lib/package-manager.sh"
 source "$ROOT/lib/interactive.sh"
 source "$ROOT/lib/checklist.sh"

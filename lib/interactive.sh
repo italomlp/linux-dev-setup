@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 select_modules_interactively() {
   local i answer item index already name
-  printf '\nLinux Dev Setup — escolha os módulos\n'
-  printf '  0) Todos\n'
+  ui_heading 'Linux Dev Setup' 'Choose modules'
+  printf '  0) All modules\n'
   for i in "${!MODULES[@]}"; do printf '  %d) %s\n' "$((i+1))" "${MODULES[i]}"; done
-  printf '  q) Sair\n'
-  printf 'Números separados por vírgula (ex.: 3,4,6): '
+  printf '  q) Quit\n\n'
+  ui_style heading 'Numbers separated by commas (for example, 3,4,6): '
   if ! IFS= read -r answer; then echo 'No selection received' >&2; return 2; fi
   answer=${answer//[[:space:]]/}
   case $answer in
@@ -26,7 +26,7 @@ select_modules_interactively() {
         (( already )) || SELECTED+=("$name")
       done;;
   esac
-  printf 'Selected modules: %s\n' "${SELECTED[*]}"
+  printf '\n'; ui_style heading 'Selected modules:'; printf ' %s\n' "${SELECTED[*]}"
   for name in "${SELECTED[@]}"; do
     case $name in
       docker) ask_optional_component 'Incluir Docker Desktop no plano?' INSTALL_DOCKER_DESKTOP;;
@@ -38,7 +38,7 @@ ask_optional_component() {
   local question=$1 variable=$2 answer current
   current=${!variable}
   while true; do
-    printf '%s [S/n] (atual: %s): ' "$question" "$current"
+    ui_style heading "$question"; printf ' [S/n] (current: %s): ' "$current"
     if ! IFS= read -r answer; then return 0; fi
     case $answer in
       ''|s|S|y|Y) printf -v "$variable" '%s' 1; return 0;;

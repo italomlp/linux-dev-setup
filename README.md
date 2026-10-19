@@ -25,6 +25,8 @@ Módulos: `system`, `terminal`, `javascript`, `docker`, `editors`, `ai-agents`, 
 
 `--checklist --dry-run` mostra o estado de autenticação detectável e a ação exata de cada ferramenta, sem abrir aplicativos ou gravar progresso. `--checklist` guia um item por vez, abre um terminal para CLIs ou o aplicativo gráfico e reavalia o estado depois. Para aplicativos sem verificação confiável, a confirmação manual é salva em `~/.local/state/linux-dev-setup/checklist.done`. Credenciais não são copiadas para esse arquivo.
 
+A apresentação usa títulos, contagens e etiquetas de estado, omitindo categorias vazias. Em um terminal compatível, usa cores discretas e negrito; em redirecionamentos, logs, `TERM=dumb` ou com `NO_COLOR` definido, a saída permanece sem códigos ANSI. Todos os itens instalados continuam visíveis no plano. Por exemplo, `NO_COLOR=1 ./install.sh --all --dry-run` força a apresentação sem cor.
+
 ## Pacote para GitHub Releases
 
 Crie os arquivos de distribuição com:
@@ -33,14 +35,14 @@ Crie os arquivos de distribuição com:
 bash scripts/package.sh --repo italomlp/linux-dev-setup
 ```
 
-O comando gera `dist/linux-dev-setup-v0.1.6.tar.gz`, seu `.sha256` e `dist/install.sh`, usando a versão em `VERSION`. O `install.sh` remoto baixa o pacote da mesma versão publicada, confere o SHA-256, extrai em um diretório temporário e inicia o instalador. O pacote contém os scripts, módulos, configuração e documentação necessários, sem exigir um clone do repositório. Sem `--repo`, o build gera apenas o pacote e o checksum. Para criar um release, faça commit, publique este projeto em um repositório GitHub e envie uma tag que corresponda ao `VERSION`:
+O comando gera `dist/linux-dev-setup-v0.1.7.tar.gz`, seu `.sha256` e `dist/install.sh`, usando a versão em `VERSION`. O `install.sh` remoto baixa o pacote da mesma versão publicada, confere o SHA-256, extrai em um diretório temporário e inicia o instalador. O pacote contém os scripts, módulos, configuração e documentação necessários, sem exigir um clone do repositório. Sem `--repo`, o build gera apenas o pacote e o checksum. Para criar um release, faça commit, publique este projeto em um repositório GitHub e envie uma tag que corresponda ao `VERSION`:
 
 ```bash
 git add .
-git commit -m "Prepare v0.1.6 release"
+git commit -m "Prepare v0.1.7 release"
 git push -u origin main
-git tag v0.1.6
-git push origin v0.1.6
+git tag v0.1.7
+git push origin v0.1.7
 ```
 
 O workflow em `.github/workflows/release.yml` roda os testes e monta o pacote a cada push em `main`. Ao enviar uma tag correspondente a `VERSION`, ele publica os três arquivos no GitHub Release. Para novas versões, altere `VERSION`, faça commit, confirme que o workflow passou em `main` e crie a tag. Se preferir publicar manualmente, carregue os três arquivos de `dist/` como assets do release.
@@ -57,7 +59,7 @@ Em outra máquina Linux, também é possível baixar o release manualmente:
 
 ```bash
 REPO=italomlp/linux-dev-setup
-VERSION=v0.1.6
+VERSION=v0.1.7
 curl -fLO "https://github.com/$REPO/releases/download/$VERSION/linux-dev-setup-$VERSION.tar.gz"
 curl -fLO "https://github.com/$REPO/releases/download/$VERSION/linux-dev-setup-$VERSION.tar.gz.sha256"
 sha256sum -c "linux-dev-setup-$VERSION.tar.gz.sha256"
@@ -71,16 +73,16 @@ Confira o plano antes de confirmar a instalação. Os passos acima não exigem G
 ## Exemplo de dry-run
 
 ```text
+Linux Dev Setup  Dry run
+------------------------------------------------------------
 System: ubuntu 24.04 | base: noble | architecture: x86_64 | desktop: GNOME
 
-Will install:
+Will install:  (2)
   - Node.js LTS via mise — User install; no APT Node or NVM
       operation: mise use -g node@lts
-
-Will install:
   - Android Command-line Tools — Verify Google ZIP against published SHA-256; accept download terms interactively
 
-Will configure:
+Will configure:  (1)
   - Android SDK packages — Use SDK Manager for Platform Tools, newest stable platform and Build Tools; prompt for licenses
 ```
 

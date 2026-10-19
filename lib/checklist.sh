@@ -120,27 +120,29 @@ checklist_launch() {
 run_checklist() {
   local dry=$1 i choice id kind state answer
   checklist_catalog
-  printf 'Guided setup checklist\n'
   while true; do
+    ui_heading 'Linux Dev Setup' 'Guided setup checklist'
+    printf '%s tools with first-run setup\n' "${#CHECKLIST_IDS[@]}"
     for i in "${!CHECKLIST_IDS[@]}"; do
       state=$(checklist_status "${CHECKLIST_IDS[i]}" "$dry")
-      printf '%2d) %-26s %s\n' "$((i+1))" "${CHECKLIST_NAMES[i]}" "$state"
-      printf '    %s\n' "$(checklist_detail "${CHECKLIST_IDS[i]}")"
+      printf '\n%2d) %-26s ' "$((i+1))" "${CHECKLIST_NAMES[i]}"
+      ui_badge "$state" "$state"; printf '\n'
+      printf '    '; ui_style muted 'Next:'; printf ' %s\n' "$(checklist_detail "${CHECKLIST_IDS[i]}")"
     done
     (( dry )) && return 0
     [[ -t 0 ]] || { echo 'Interactive checklist requires a terminal; use --checklist --dry-run for status' >&2; return 2; }
-    printf 'Choose an item (0 to exit): '
+    printf '\n'; ui_style heading 'Choose an item (0 to exit): '
     IFS= read -r choice || return 0
     [[ $choice == 0 ]] && return 0
     [[ $choice =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#CHECKLIST_IDS[@]} )) || { echo 'Invalid selection'; continue; }
     id=${CHECKLIST_IDS[choice-1]}; kind=${CHECKLIST_KINDS[choice-1]}
     checklist_launch "$id" "$kind" || { echo "Could not launch ${CHECKLIST_NAMES[choice-1]}"; continue; }
-    printf 'Complete setup in the opened app or terminal, then press Enter to recheck: '
+    ui_style heading 'Complete setup in the opened app or terminal, then press Enter to recheck: '
     IFS= read -r answer || return 0
     state=$(checklist_status "$id" 0)
     if [[ $state != ready ]] && ! checklist_probed "$id"; then
       case $id in gh|claude|codex|tailscale|docker|android) echo 'Still pending according to the tool';;
-        *) printf 'No reliable status check. Mark this item complete? [y/N] '; IFS= read -r answer || return 0; [[ $answer == y || $answer == Y ]] && checklist_mark "$id";;
+        *) ui_style heading 'No reliable status check. Mark this item complete? [y/N] '; IFS= read -r answer || return 0; [[ $answer == y || $answer == Y ]] && checklist_mark "$id";;
       esac
     fi
   done
