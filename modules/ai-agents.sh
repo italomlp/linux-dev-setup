@@ -1,20 +1,11 @@
 #!/usr/bin/env bash
 plan_ai_agents() {
-  local node_dep=-
-  local i
-  for i in "${!ACTION_TITLE[@]}"; do
-    if [[ ${ACTION_TITLE[i]} == 'Node.js LTS via mise' && ${ACTION_STATUS[i]} == install ]]; then node_dep=$i; fi
-  done
-  if [[ $node_dep == - ]] && { ! has_command mise || [[ ! -d $HOME/.local/share/mise/installs/node ]]; }; then
-    source "$ROOT/modules/javascript.sh"
-    plan_mise_node
-    node_dep=$REPLY
-  fi
-  local items=('Claude Code:claude:@anthropic-ai/claude-code' 'OpenAI Codex CLI:codex:@openai/codex' 'OpenCode:opencode:@opencode/cli' 'Gemini CLI:gemini:@google/gemini-cli') item title binary package
-  for item in "${items[@]}"; do
-    IFS=: read -r title binary package <<< "$item"
-    if has_command "$binary"; then add_action installed "$title" none "$binary" - 'Existing installation retained'
-    else add_action install "$title" npm "$package" "$node_dep" 'User-level npm via mise; no automatic login'; fi
+  add_action configure 'AI CLI command path' ai-path '' - 'Back up Bash/Zsh config; keep ~/.local/bin ahead of project tool paths'
+  local path_dep=$((${#ACTION_TYPE[@]}-1))
+  local binary title
+  for binary in claude codex opencode gemini; do
+    case $binary in claude) title='Claude Code';; codex) title='OpenAI Codex CLI';; opencode) title=OpenCode;; gemini) title='Gemini CLI';; esac
+    add_action install "$title" ai-cli "$binary" "$path_dep" 'Verify stable user installation; migrate old mise npm copies only after success; Gemini uses active Node'
   done
   if has_command agy || has_command agy-ide; then add_action installed 'Antigravity CLI' none '' - 'Existing installation retained'
   else add_action install 'Antigravity CLI' antigravity-cli '' - 'download verified Antigravity CLI using vendor SHA-512 manifest'; fi

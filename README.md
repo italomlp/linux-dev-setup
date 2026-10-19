@@ -21,7 +21,7 @@ Sem argumentos, o script faz dry-run de todos os módulos. Com `--interactive`, 
 
 Módulos: `system`, `terminal`, `javascript`, `docker`, `editors`, `ai-agents`, `local-llms`, `android`, `applications`, `productivity`.
 
-`config/settings.conf` permite desligar Docker Desktop ou Flatpak com `INSTALL_DOCKER_DESKTOP=0` e `INSTALL_FLATPAK=0`. Docker Engine é apenas um fallback explícito: `INSTALL_DOCKER_ENGINE_FALLBACK=1` quando KVM não está disponível. `config/packages.conf` lista os pacotes essenciais. No módulo `ai-agents`, a dependência mise/Node é planejada automaticamente se estiver ausente.
+`config/settings.conf` permite desligar Docker Desktop ou Flatpak com `INSTALL_DOCKER_DESKTOP=0` e `INSTALL_FLATPAK=0`. Docker Engine é apenas um fallback explícito: `INSTALL_DOCKER_ENGINE_FALLBACK=1` quando KVM não está disponível. `config/packages.conf` lista os pacotes essenciais. O módulo `ai-agents` não instala Node; Gemini requer Node/npm ativos.
 
 `--checklist --dry-run` mostra o estado de autenticação detectável e a ação exata de cada ferramenta, sem abrir aplicativos ou gravar progresso. `--checklist` guia um item por vez, abre um terminal para CLIs ou o aplicativo gráfico e reavalia o estado depois. Para aplicativos sem verificação confiável, a confirmação manual é salva em `~/.local/state/linux-dev-setup/checklist.done`. Credenciais não são copiadas para esse arquivo.
 
@@ -92,7 +92,7 @@ As categorias `Already installed`, `Will install`, `Will configure`, `Skipped`, 
 
 - Pacotes disponíveis nos repositórios APT já configurados, inclusive ferramentas essenciais e utilitários do desktop.
 - Repositórios assinados do GitHub CLI, Warp, Claude Desktop, Docker, Vivaldi, Chrome, Tailscale, DBeaver e Bruno quando compatíveis.
-- mise via `extrepo`, Node LTS, pnpm e Bun via mise; CLIs de IA via npm executado pelo Node do mise.
+- mise via `extrepo`, Node LTS, pnpm e Bun via mise; CLIs de IA standalone; Gemini via npm em prefixo estável com Node ativo.
 - Flatpak e o remoto Flathub do usuário; Zen Browser pelo ID oficial `app.zen_browser.zen`.
 - Blocos limitados para Zsh, Bash e Android em arquivos do usuário, com cópia de segurança antes de alterar arquivos existentes.
 - Downloads oficiais e verificados de Slack, Docker Desktop, Android Studio, Lazygit, Zellij, Starship, Antigravity IDE/CLI, ChatGPT Desktop, Ollama e llama.cpp. O instalador verifica assinaturas ou checksums publicados quando disponíveis; Antigravity IDE e ChatGPT Desktop não publicam checksum nessas páginas e são baixados por HTTPS com validação do formato.
@@ -144,3 +144,20 @@ Suporte de terceiros não é igual a suporte da distribuição: no Linux Mint, o
 Antes de rodar novamente, revise `./install.sh --all --dry-run`. Atualize pacotes APT com o ciclo normal da distribuição, Flatpaks com `flatpak update --user`, ferramentas mise com `mise upgrade`, e aplicativos de download manual seguindo seus canais oficiais. Verifique periodicamente os IDs, repositórios e requisitos em [docs/tooling.md](docs/tooling.md); métodos de instalação mudam.
 
 Logs de execução real ficam em `~/.local/state/linux-dev-setup/`, com permissão `0600`. O dry-run não cria esse diretório. Se uma ação falhar, as seguintes independentes continuam e o resumo indica falhas e dependências puladas. Corrija o problema e reexecute o módulo.
+
+### Reparar Warp e migrar CLIs de IA
+
+Revise e execute novamente, como usuário normal:
+
+```bash
+./install.sh --module terminal,ai-agents --dry-run
+./install.sh --module terminal,ai-agents
+```
+
+A fonte APT criada pelo Warp é preservada. Se houver uma fonte redundante `linux-dev-setup-warp.list`, ela será validada, copiada para `~/.local/state/linux-dev-setup/repo-backups/` e removida antes de operações APT; o mesmo ocorre após instalar Warp.
+
+Claude Code, Codex e OpenCode usam os instaladores standalone oficiais, com comandos expostos em `~/.local/bin`. Gemini usa `npm install --global --prefix ~/.local/share/linux-dev-setup/npm @google/gemini-cli`, com launcher estável em `~/.local/bin/gemini`. O launcher usa o Node ativo (20+); projetos com Node incompatível precisam selecionar uma versão suportada. O módulo de IA não instala Node nem altera a configuração global do npm.
+
+O rerun verifica as novas instalações antes de desinstalar somente os quatro pacotes antigos dos prefixos Node existentes no mise. Credenciais e configurações são preservadas. Se a substituição falhar, a instalação antiga permanece. Abra um novo terminal após a migração; Bash e Zsh mantêm o diretório estável no PATH mesmo após a ativação do mise.
+
+Atualizações: Claude usa seu atualizador nativo; Codex pode ser atualizado repetindo o instalador oficial (`https://chatgpt.com/codex/install.sh`); OpenCode usa `opencode upgrade`; Gemini usa o comando npm com o prefixo explícito acima. Um rerun verifica instalações existentes, sem forçar atualização de versão.

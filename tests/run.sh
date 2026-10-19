@@ -236,11 +236,20 @@ cat > "$TMP/github-release.json" <<'EOF'
 EOF
 out=$(python3 "$ROOT/scripts/resolve-download.py" github "$TMP/github-release.json" 'starship-x86_64-unknown-linux-musl.tar.gz' 'starship/starship')
 check github-digest 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' "$out"
+# These checks exercise release fallbacks even on hosts with newer APT catalogs.
+apt-cache() {
+  case ${*: -1} in
+    starship|zellij|lazygit) printf '  Candidate: (none)\n';;
+    *) command apt-cache "$@";;
+  esac
+}
+export -f apt-cache
 out=$(DS_TEST_OS_RELEASE="$TMP/mint" bash "$ROOT/install.sh" --module terminal --dry-run)
 check starship-auto 'download verified Starship release' "$out"
 check zellij-auto 'download verified Zellij release' "$out"
 out=$(DS_TEST_OS_RELEASE="$TMP/mint" bash "$ROOT/install.sh" --module system --dry-run)
 check lazygit-auto 'download verified Lazygit release' "$out"
+unset -f apt-cache
 out=$(DS_TEST_OS_RELEASE="$TMP/mint" bash "$ROOT/install.sh" --module applications --dry-run)
 check tailscale-auto 'tailscale repository' "$out"
 check chrome-auto 'google-chrome repository' "$out"
@@ -334,6 +343,7 @@ check mint-chatgpt-base 'ChatGPT Desktop' "$out"
 check chatgpt-auto 'download official ChatGPT .deb' "$out"
 out=$(ROOT="$ROOT" TMP="$TMP" bash -c '
   source "$ROOT/lib/package-manager.sh"
+  source "$ROOT/lib/detection.sh"
   repo_present() { [[ $1 == warp ]]; }
   sudo() { printf "unexpected sudo\\n"; return 99; }
   curl() { printf "unexpected curl\\n"; return 99; }
@@ -397,6 +407,7 @@ if cat "$TMP/dist/install.sh" | PATH="$TMP/bin:$PATH" MOCK_CORRUPT=1 bash -s -- 
   fail 'bootstrap accepted invalid checksum'
 fi
 check bootstrap-checksum 'FAILED' "$(cat "$TMP/out")"
+bash "$ROOT/tests/cli-repair.sh"
 bash "$ROOT/tests/desktop-setup.sh"
 bash "$ROOT/tests/ui.sh"
 printf 'All tests passed\n'

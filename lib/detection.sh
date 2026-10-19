@@ -131,3 +131,37 @@ repo_present() {
   esac
   grep -RqsF "$needle" /etc/apt/sources.list.d /etc/apt/sources.list 2>/dev/null
 }
+warp_vendor_source_present() {
+  local file
+  for file in "$(apt_source_dir)"/*.sources "$(apt_source_dir)"/*.list; do
+    [[ $file != */linux-dev-setup-warp.list && -f $file ]] || continue
+    grep -qF 'https://releases.warp.dev/linux/deb' "$file" && return 0
+  done
+  return 1
+}
+warp_vendor_source_valid() {
+  python3 - "$(apt_source_dir)" <<'PY'
+import pathlib, re, sys
+uri = 'https://releases.warp.dev/linux/deb'
+for path in pathlib.Path(sys.argv[1]).glob('*'):
+    if path.name == 'linux-dev-setup-warp.list' or path.suffix not in ('.sources', '.list'):
+        continue
+    text = path.read_text()
+    if path.suffix == '.sources':
+        for stanza in re.split(r'\n\s*\n', text):
+            fields = dict(re.findall(r'^([\w-]+):\s*(.*?)\s*$', stanza, re.M))
+            if (fields.get('Types') == 'deb' and fields.get('URIs', '').rstrip('/') == uri
+                and fields.get('Suites') == 'stable' and 'main' in fields.get('Components', '').split()
+                and fields.get('Enabled', 'yes').lower() != 'no'
+                and pathlib.Path(fields.get('Signed-By', '/nonexistent')).is_file()):
+                sys.exit(0)
+    else:
+        for line in text.splitlines():
+            match = re.fullmatch(r'\s*deb\s+\[([^]]+)\]\s+https://releases\.warp\.dev/linux/deb/?\s+stable\s+main\s*', line)
+            if match:
+                key = re.search(r'(?:^|\s)signed-by=(\S+)', match[1])
+                if key and pathlib.Path(key[1]).is_file():
+                    sys.exit(0)
+sys.exit(1)
+PY
+}

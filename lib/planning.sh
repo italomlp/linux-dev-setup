@@ -73,6 +73,9 @@ describe_action() {
     flatpak) printf 'flatpak install --user -y flathub %q' "$arg";;
     flatpak-remote) printf 'flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo';;
     mise-tool) printf 'mise use -g %q' "$arg";;
+    ai-cli) printf 'install/verify official %s CLI in stable user path; migrate legacy mise npm package' "$arg";;
+    ai-path) printf 'back up and configure Bash/Zsh stable AI CLI PATH';;
+    warp-repo-repair) printf 'back up and remove redundant installer Warp APT source; refresh APT';;
     npm) printf 'mise exec node@lts -- npm install -g %q' "$arg";;
     shell-zsh) printf 'backup and append managed block to ~/.zshrc';;
     shell-bash) printf 'backup and append managed block to ~/.bashrc';;

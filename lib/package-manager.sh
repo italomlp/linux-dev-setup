@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+if ! declare -F install_ai_cli >/dev/null; then source "$(dirname "${BASH_SOURCE[0]}")/ai-cli.sh"; fi
 APT_REFRESHED=0
 android_stable_packages() {
   local listing platform build
@@ -12,6 +13,7 @@ refresh_apt() {
   if (( ! APT_REFRESHED )); then sudo apt-get update || return 1; APT_REFRESHED=1; fi
 }
 setup_repo() {
+  repair_warp_repo || return 1
   local arch; arch=$(dpkg --print-architecture)
   case $1 in
     claude-desktop)
@@ -33,10 +35,13 @@ setup_repo() {
       printf 'deb [signed-by=%s] https://downloads.claude.ai/claude-desktop/apt/stable stable main\n' "$key" | sudo tee "$path" >/dev/null
       rm -f "$tmp"; APT_REFRESHED=0; refresh_apt;;
     warp)
-      local path=/etc/apt/sources.list.d/linux-dev-setup-warp.list key=/etc/apt/keyrings/linux-dev-setup-warp.gpg
+      local path="$(apt_source_dir)/linux-dev-setup-warp.list" key=/etc/apt/keyrings/linux-dev-setup-warp.gpg
       # Warp's own installer commonly installs the same source and key under a
       # different path. Reuse that source instead of creating a conflicting
       # Signed-By entry for the same URI/suite.
+      if warp_vendor_source_present && ! warp_vendor_source_valid; then
+        echo 'Warp vendor source is invalid; refusing to add another source' >&2; return 1
+      fi
       if repo_present warp; then
         return 0
       fi
@@ -182,6 +187,18 @@ zsh_plugins_ready() {
   [[ -r /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]] || { echo 'zsh-autosuggestions package script is missing' >&2; return 1; }
   [[ -r /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]] || { echo 'zsh-syntax-highlighting package script is missing' >&2; return 1; }
 }
+repair_warp_repo() {
+  local source_file="${APT_SOURCE_DIR:-/etc/apt/sources.list.d}/linux-dev-setup-warp.list" backup_dir
+  [[ -f $source_file ]] || return 0
+  warp_vendor_source_present || return 0
+  warp_vendor_source_valid || { echo 'Warp vendor source is invalid; retaining installer source' >&2; return 1; }
+  backup_dir="$HOME/.local/state/linux-dev-setup/repo-backups"
+  mkdir -p "$backup_dir" || return 1
+  cp -p "$source_file" "$backup_dir/$(basename "$source_file").$(date +%Y%m%d-%H%M%S)" || return 1
+  sudo rm -- "$source_file" || return 1
+  APT_REFRESHED=0
+  refresh_apt
+}
 repair_claude_repo() {
   local package_source=/etc/apt/sources.list.d/claude-desktop.list installer_source=/etc/apt/sources.list.d/linux-dev-setup-claude-desktop.list
   if [[ -e $package_source && -e $installer_source ]]; then
@@ -193,6 +210,9 @@ repair_claude_repo() {
 run_action() {
   local type=$1 arg=$2
   case $type in
+    ai-cli) install_ai_cli "$arg";;
+    ai-path) configure_ai_path;;
+    warp-repo-repair) repair_warp_repo;;
     browser-repo-cleanup)
       vendor_repo_valid "$arg" || { echo 'Vendor repository is not verified; retaining installer source' >&2; return 1; }
       local source_file="$(apt_source_dir)/linux-dev-setup-$arg.list"
@@ -204,8 +224,10 @@ run_action() {
       APT_REFRESHED=0
       refresh_apt;;
     apt)
+      repair_warp_repo || return 1
       refresh_apt || return 1
       sudo apt-get install -y "$arg" || return
+      [[ $arg != warp-terminal ]] || repair_warp_repo || return 1
       [[ $arg != claude-desktop ]] || repair_claude_repo;;
     claude-repo-repair) repair_claude_repo;;
     repo) setup_repo "$arg";;
@@ -227,7 +249,7 @@ run_action() {
         sudo apt-get install -y "$deb" || return 1
         has_command slack || return 1
       );;
-    repo-tools) refresh_apt; sudo apt-get install -y ca-certificates curl gnupg;;
+    repo-tools) repair_warp_repo && refresh_apt && sudo apt-get install -y ca-certificates curl gnupg;;
     flatpak)
       flatpak install --user -y flathub "$arg" || return
       flatpak info --user "$arg" >/dev/null 2>&1 || flatpak info "$arg" >/dev/null 2>&1;;
@@ -506,6 +528,7 @@ EOF
 }
 execute_plan() {
   local i failed=0 completed=0 skipped=0 dep
+  repair_warp_repo || return 1
   if declare -F ui_heading >/dev/null; then ui_heading 'Linux Dev Setup' 'Execution progress'; fi
   for i in "${!ACTION_TYPE[@]}"; do
     [[ ${ACTION_STATUS[i]} == install || ${ACTION_STATUS[i]} == configure ]] || continue

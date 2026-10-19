@@ -56,11 +56,24 @@ for name in "${SELECTED[@]}"; do
 done
 detect_system
 if [[ ${DS_TEST_MODE:-0} != 1 && -e /etc/apt/sources.list.d/claude-desktop.list && -e /etc/apt/sources.list.d/linux-dev-setup-claude-desktop.list ]]; then
-  APT_SOURCE_PARTS_OVERRIDE=$(mktemp -d)
-  trap 'rm -rf "$APT_SOURCE_PARTS_OVERRIDE"' EXIT
+  claude_plan_sources=$(mktemp -d)
+  APT_SOURCE_PARTS_OVERRIDE=$claude_plan_sources
+  trap 'rm -rf "$claude_plan_sources"' EXIT
   cp -a /etc/apt/sources.list.d/. "$APT_SOURCE_PARTS_OVERRIDE/"
   rm -f "$APT_SOURCE_PARTS_OVERRIDE/linux-dev-setup-claude-desktop.list"
   add_action configure 'Claude Desktop repository repair' claude-repo-repair '' - 'remove duplicate installer APT source; retain package-managed source'
+fi
+if [[ -f $(apt_source_dir)/linux-dev-setup-warp.list ]] && warp_vendor_source_present; then
+  if warp_vendor_source_valid; then
+    warp_plan_sources=$(mktemp -d)
+    cp -a "${APT_SOURCE_PARTS_OVERRIDE:-$(apt_source_dir)}/." "$warp_plan_sources/"
+    APT_SOURCE_PARTS_OVERRIDE=$warp_plan_sources
+    trap 'rm -rf "$warp_plan_sources"; [[ -z ${claude_plan_sources:-} ]] || rm -rf "$claude_plan_sources"' EXIT
+    rm -f "$APT_SOURCE_PARTS_OVERRIDE/linux-dev-setup-warp.list"
+    add_action configure 'Warp repository repair' warp-repo-repair '' - 'Back up and remove duplicate installer source; retain verified Warp source'
+  else
+    plan_manual 'Warp repository repair' 'Vendor source is invalid; installer source retained. Repair vendor source before running APT.'
+  fi
 fi
 for name in "${SELECTED[@]}"; do
   source "$ROOT/modules/$name.sh"
