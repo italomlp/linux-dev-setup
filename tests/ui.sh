@@ -63,6 +63,7 @@ progress=$(ROOT="$ROOT" TMP="$TMP" bash -c '
   LOG_FILE="$TMP/action.log"; : > "$LOG_FILE"
   run_action() { :; }
   add_action install "Sample tool" apt sample - ""
+  confirm_planned_changes() { :; }
   execute_plan
 ')
 check progress-heading "$progress" 'Execution progress'

@@ -55,7 +55,7 @@ for name in "${SELECTED[@]}"; do
   (( valid )) || { echo "Unknown module: $name" >&2; exit 2; }
 done
 detect_system
-if [[ ${DS_TEST_MODE:-0} != 1 && -e /etc/apt/sources.list.d/claude-desktop.list && -e /etc/apt/sources.list.d/linux-dev-setup-claude-desktop.list ]]; then
+if [[ ${DS_TEST_MODE:-0} != 1 && -e /etc/apt/sources.list.d/linux-dev-setup-claude-desktop.list ]] && claude_vendor_source_valid; then
   claude_plan_sources=$(mktemp -d)
   APT_SOURCE_PARTS_OVERRIDE=$claude_plan_sources
   trap 'rm -rf "$claude_plan_sources"' EXIT
@@ -89,5 +89,4 @@ if (( ! YES )); then
   read -r answer
   [[ $answer == y || $answer == Y ]] || exit 0
 fi
-start_log
 execute_plan

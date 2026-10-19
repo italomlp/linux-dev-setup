@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 if ! declare -F install_ai_cli >/dev/null; then source "$(dirname "${BASH_SOURCE[0]}")/ai-cli.sh"; fi
+source "$(dirname "${BASH_SOURCE[0]}")/confirmation.sh"
 APT_REFRESHED=0
 android_stable_packages() {
   local listing platform build
@@ -19,7 +20,7 @@ setup_repo() {
     claude-desktop)
       local path=/etc/apt/sources.list.d/linux-dev-setup-claude-desktop.list key=/etc/apt/keyrings/linux-dev-setup-claude-desktop.asc
       if [[ -e /etc/apt/sources.list.d/claude-desktop.list ]]; then
-        [[ ! -e $path ]] || sudo rm -f "$path"
+        repair_claude_repo || return 1
         APT_REFRESHED=0
         refresh_apt
         return 0
@@ -53,7 +54,7 @@ setup_repo() {
       printf 'deb [arch=%s signed-by=%s] https://releases.warp.dev/linux/deb stable main\n' "$arch" "$key" | sudo tee "$path" >/dev/null
       rm -f "$tmp"; APT_REFRESHED=0; refresh_apt;;
     mise)
-      sudo apt-get install -y extrepo
+      sudo apt-get install --no-remove -y extrepo
       sudo extrepo enable mise
       APT_REFRESHED=0; refresh_apt;;
     github-cli)
@@ -200,9 +201,13 @@ repair_warp_repo() {
   refresh_apt
 }
 repair_claude_repo() {
-  local package_source=/etc/apt/sources.list.d/claude-desktop.list installer_source=/etc/apt/sources.list.d/linux-dev-setup-claude-desktop.list
+  local package_source="$(apt_source_dir)/claude-desktop.list" installer_source="$(apt_source_dir)/linux-dev-setup-claude-desktop.list"
   if [[ -e $package_source && -e $installer_source ]]; then
-    sudo rm -f "$installer_source"
+    claude_vendor_source_valid || { echo 'Claude vendor source is invalid; retaining installer source' >&2; return 1; }
+    local backup_dir="$HOME/.local/state/linux-dev-setup/repo-backups"
+    mkdir -p "$backup_dir" || return 1
+    cp -p "$installer_source" "$backup_dir/$(basename "$installer_source").$(date +%Y%m%d-%H%M%S)" || return 1
+    sudo rm -f "$installer_source" || return 1
     APT_REFRESHED=0
     refresh_apt
   fi
@@ -226,7 +231,7 @@ run_action() {
     apt)
       repair_warp_repo || return 1
       refresh_apt || return 1
-      sudo apt-get install -y "$arg" || return
+      sudo apt-get install --no-remove -y "$arg" || return
       [[ $arg != warp-terminal ]] || repair_warp_repo || return 1
       [[ $arg != claude-desktop ]] || repair_claude_repo;;
     claude-repo-repair) repair_claude_repo;;
@@ -246,10 +251,10 @@ run_action() {
         debsig-verify "$deb" || return 1
         sha256sum "$deb"
         refresh_apt || return 1
-        sudo apt-get install -y "$deb" || return 1
+        sudo apt-get install --no-remove -y "$deb" || return 1
         has_command slack || return 1
       );;
-    repo-tools) repair_warp_repo && refresh_apt && sudo apt-get install -y ca-certificates curl gnupg;;
+    repo-tools) repair_warp_repo && refresh_apt && sudo apt-get install --no-remove -y ca-certificates curl gnupg;;
     flatpak)
       flatpak install --user -y flathub "$arg" || return
       flatpak info --user "$arg" >/dev/null 2>&1 || flatpak info "$arg" >/dev/null 2>&1;;
@@ -341,12 +346,12 @@ run_action() {
           sha=$(python3 "$ROOT/scripts/resolve-download.py" docker-checksum "$tmp/checksums.txt")
           curl -fsSL --retry 3 "$url" -o "$tmp/docker-desktop-amd64.deb"
           printf '%s  %s\n' "$sha" "$tmp/docker-desktop-amd64.deb" | sha256sum -c -
-          refresh_apt; sudo apt-get install -y "$tmp/docker-desktop-amd64.deb"
+          refresh_apt; sudo apt-get install --no-remove -y "$tmp/docker-desktop-amd64.deb"
         )
       else
         [[ -f $arg && $arg == *.deb && ${DOCKER_DESKTOP_SHA256:-} =~ ^[[:xdigit:]]{64}$ ]] || return 1
         printf '%s  %s\n' "$DOCKER_DESKTOP_SHA256" "$arg" | sha256sum -c -
-        refresh_apt; sudo apt-get install -y "$arg"
+        refresh_apt; sudo apt-get install --no-remove -y "$arg"
       fi
       package_installed docker-desktop && docker --version && docker compose version;;
     chatgpt-deb)
@@ -360,7 +365,7 @@ run_action() {
         [[ $(dpkg-deb -f "$tmp/chatgpt_amd64.deb" Package) == chatgpt || $(dpkg-deb -f "$tmp/chatgpt_amd64.deb" Package) == chatgpt-desktop ]]
         [[ $(dpkg-deb -f "$tmp/chatgpt_amd64.deb" Architecture) == amd64 ]]
         sha256sum "$tmp/chatgpt_amd64.deb"
-        refresh_apt; sudo apt-get install -y "$tmp/chatgpt_amd64.deb"
+        refresh_apt; sudo apt-get install --no-remove -y "$tmp/chatgpt_amd64.deb"
         has_command chatgpt
       );;
     antigravity-ide)
@@ -528,7 +533,14 @@ EOF
 }
 execute_plan() {
   local i failed=0 completed=0 skipped=0 dep
-  repair_warp_repo || return 1
+  confirm_planned_changes || return 1
+  [[ -n ${LOG_FILE:-} ]] || start_log
+  for i in "${!ACTION_TYPE[@]}"; do
+    [[ ${ACTION_STATUS[i]} == install || ${ACTION_STATUS[i]} == configure ]] || continue
+    [[ ${ACTION_TYPE[i]} != gpu-check ]] || continue
+    repair_warp_repo || return 1
+    break
+  done
   if declare -F ui_heading >/dev/null; then ui_heading 'Linux Dev Setup' 'Execution progress'; fi
   for i in "${!ACTION_TYPE[@]}"; do
     [[ ${ACTION_STATUS[i]} == install || ${ACTION_STATUS[i]} == configure ]] || continue

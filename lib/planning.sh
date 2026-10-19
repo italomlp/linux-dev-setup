@@ -64,10 +64,10 @@ plan_repo_package() {
 describe_action() {
   local type=$1 arg=$2
   case $type in
-    apt) printf 'sudo apt-get update; sudo apt-get install -y %q' "$arg";;
+    apt) printf 'sudo apt-get update; sudo apt-get install --no-remove -y %q' "$arg";;
     repo) printf 'configure signed %s APT repository (sudo)' "$arg";;
     browser-repo-cleanup) printf 'back up and remove redundant installer-owned %s APT source (sudo)' "$arg";;
-    repo-tools) printf 'sudo apt-get install -y ca-certificates curl gnupg';;
+    repo-tools) printf 'sudo apt-get install --no-remove -y ca-certificates curl gnupg';;
     slack-signature) printf 'configure Slack debsig verification key and policy';;
     slack-deb) printf 'download official Slack .deb, verify package signature, install with APT';;
     flatpak) printf 'flatpak install --user -y flathub %q' "$arg";;

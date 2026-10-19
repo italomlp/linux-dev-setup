@@ -125,7 +125,7 @@ echo 'ok - Gemini uses active Node, validates version, and stable shell PATH is 
 sed -i 's/Types: deb-src/Types: deb/' "$APT_SOURCE_DIR/warpdotdev.sources" 2>/dev/null || true
 sudo() {
   if [[ $1 == apt-get && $2 == install ]]; then
-    if [[ $4 == warp-terminal ]]; then
+    if [[ $5 == warp-terminal ]]; then
       cat > "$APT_SOURCE_DIR/warpdotdev.sources" <<EOT
 Types: deb
 URIs: https://releases.warp.dev/linux/deb
@@ -176,3 +176,11 @@ chmod +x "$MISE_DATA_DIR/installs/node/22/bin/claude"
 ln -sfn "$MISE_DATA_DIR/installs/node/22/bin/claude" "$HOME/.local/bin/claude"
 if ai_cli_ready claude; then fail 'custom mise symlink treated as native'; fi
 echo 'ok - missing runtime is reported; custom mise paths still migrate'
+printf 'deb [signed-by=/missing] https://downloads.claude.ai/claude-desktop/apt/stable stable main\n' > "$APT_SOURCE_DIR/claude-desktop.list"
+printf installer > "$APT_SOURCE_DIR/linux-dev-setup-claude-desktop.list"
+if repair_claude_repo; then fail 'invalid Claude vendor accepted'; fi
+[[ -f $APT_SOURCE_DIR/linux-dev-setup-claude-desktop.list ]] || fail 'Claude fallback removed without valid vendor source'
+printf 'deb [arch=amd64 signed-by=%s] https://downloads.claude.ai/claude-desktop/apt/stable stable main\n' "$TMP/warp.gpg" > "$APT_SOURCE_DIR/claude-desktop.list"
+repair_claude_repo
+[[ ! -f $APT_SOURCE_DIR/linux-dev-setup-claude-desktop.list ]] || fail 'Claude duplicate retained'
+echo 'ok - Claude cleanup validates vendor source and preserves fallback when invalid'

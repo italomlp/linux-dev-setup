@@ -140,11 +140,17 @@ warp_vendor_source_present() {
   return 1
 }
 warp_vendor_source_valid() {
-  python3 - "$(apt_source_dir)" <<'PY'
+  signed_vendor_source_valid https://releases.warp.dev/linux/deb linux-dev-setup-warp.list
+}
+claude_vendor_source_valid() {
+  signed_vendor_source_valid https://downloads.claude.ai/claude-desktop/apt/stable linux-dev-setup-claude-desktop.list claude-desktop.list
+}
+signed_vendor_source_valid() {
+  python3 - "$(apt_source_dir)" "$1" "$2" "${3:-}" <<'PY'
 import pathlib, re, sys
-uri = 'https://releases.warp.dev/linux/deb'
+uri, excluded, required = sys.argv[2:]
 for path in pathlib.Path(sys.argv[1]).glob('*'):
-    if path.name == 'linux-dev-setup-warp.list' or path.suffix not in ('.sources', '.list'):
+    if path.name == excluded or (required and path.name != required) or path.suffix not in ('.sources', '.list'):
         continue
     text = path.read_text()
     if path.suffix == '.sources':
@@ -157,7 +163,7 @@ for path in pathlib.Path(sys.argv[1]).glob('*'):
                 sys.exit(0)
     else:
         for line in text.splitlines():
-            match = re.fullmatch(r'\s*deb\s+\[([^]]+)\]\s+https://releases\.warp\.dev/linux/deb/?\s+stable\s+main\s*', line)
+            match = re.fullmatch(r'\s*deb\s+\[([^]]+)\]\s+' + re.escape(uri) + r'/?\s+stable\s+main\s*', line)
             if match:
                 key = re.search(r'(?:^|\s)signed-by=(\S+)', match[1])
                 if key and pathlib.Path(key[1]).is_file():

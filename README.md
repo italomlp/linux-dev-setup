@@ -1,163 +1,127 @@
 # Linux Dev Setup
 
-Instalador Bash modular para um desktop x86_64 com Ubuntu, Debian, Zorin OS, Pop!_OS ou Linux Mint. O foco é preservar instalações e dados existentes. O plano é calculado antes de qualquer alteração e reutilizado na execução.
+Modular Bash installer for an x86_64 desktop running Ubuntu, Debian, Linux Mint, Pop!_OS, or Zorin OS. Preview the plan, choose modules, then approve changes. Run as your normal user; the installer requests `sudo` when needed.
 
-## Uso
+[Português (Brasil)](README.pt-BR.md) · [Installation decisions and side effects](docs/tooling.md)
+
+## Run from a release (no Git required)
+
+You need Bash, curl, tar, Python 3, and `sha256sum`. Download, verify, and extract version **0.2.0**:
 
 ```bash
-./install.sh --list
-./install.sh --dry-run
+curl -fLO https://github.com/italomlp/linux-dev-setup/releases/download/v0.2.0/linux-dev-setup-v0.2.0.tar.gz
+curl -fLO https://github.com/italomlp/linux-dev-setup/releases/download/v0.2.0/linux-dev-setup-v0.2.0.tar.gz.sha256
+sha256sum -c linux-dev-setup-v0.2.0.tar.gz.sha256 && \
+  tar -xzf linux-dev-setup-v0.2.0.tar.gz && \
+  cd linux-dev-setup-v0.2.0 && \
+  ./install.sh --interactive --dry-run && \
+  ./install.sh --interactive
+```
+
+Continue only if the checksum reports `OK`. The checksum detects corruption; it is downloaded from the same release and is not an independent signature.
+
+Alternatively, download the small launcher, inspect it, and run it. It downloads and verifies the matching release automatically:
+
+```bash
+curl -fL https://github.com/italomlp/linux-dev-setup/releases/download/v0.2.0/install.sh -o linux-dev-setup-launcher.sh
+less linux-dev-setup-launcher.sh
+bash linux-dev-setup-launcher.sh --interactive --dry-run
+bash linux-dev-setup-launcher.sh --interactive
+```
+
+## Run from source (no release download)
+
+```bash
+git clone https://github.com/italomlp/linux-dev-setup.git
+cd linux-dev-setup
 ./install.sh --interactive --dry-run
 ./install.sh --interactive
-./install.sh --all --dry-run
-./install.sh --module javascript,docker,ai-agents --dry-run
-./install.sh --all
-./install.sh --module android --yes
-./install.sh --checklist --dry-run
-./install.sh --checklist
 ```
 
-Sem argumentos, o script faz dry-run de todos os módulos. Com `--interactive`, um menu permite escolher módulos por número (separados por vírgula), todos com `0`, ou sair com `q`. Ao escolher Docker ou Applications, o menu também pergunta se deve incluir Docker Desktop ou Flatpak e Zen. O plano é mostrado antes da execução; sem `--dry-run`, o instalador pede uma confirmação final. `--yes` permite execução sem essa confirmação. O script deve ser iniciado como usuário normal; ele solicita `sudo` somente para ações de sistema. Não execute com `sudo ./install.sh`.
+To use the exact release source, run `git checkout v0.2.0` before starting the installer. The default branch can contain newer changes.
 
-Módulos: `system`, `terminal`, `javascript`, `docker`, `editors`, `ai-agents`, `local-llms`, `android`, `applications`, `productivity`.
-
-`config/settings.conf` permite desligar Docker Desktop ou Flatpak com `INSTALL_DOCKER_DESKTOP=0` e `INSTALL_FLATPAK=0`. Docker Engine é apenas um fallback explícito: `INSTALL_DOCKER_ENGINE_FALLBACK=1` quando KVM não está disponível. `config/packages.conf` lista os pacotes essenciais. O módulo `ai-agents` não instala Node; Gemini requer Node/npm ativos.
-
-`--checklist --dry-run` mostra o estado de autenticação detectável e a ação exata de cada ferramenta, sem abrir aplicativos ou gravar progresso. `--checklist` guia um item por vez, abre um terminal para CLIs ou o aplicativo gráfico e reavalia o estado depois. Para aplicativos sem verificação confiável, a confirmação manual é salva em `~/.local/state/linux-dev-setup/checklist.done`. Credenciais não são copiadas para esse arquivo.
-
-A apresentação usa títulos, contagens e etiquetas de estado, omitindo categorias vazias. Em um terminal compatível, usa cores discretas e negrito; em redirecionamentos, logs, `TERM=dumb` ou com `NO_COLOR` definido, a saída permanece sem códigos ANSI. Todos os itens instalados continuam visíveis no plano. Por exemplo, `NO_COLOR=1 ./install.sh --all --dry-run` força a apresentação sem cor.
-
-## Pacote para GitHub Releases
-
-Crie os arquivos de distribuição com:
+## Choose what to install
 
 ```bash
-bash scripts/package.sh --repo italomlp/linux-dev-setup
+./install.sh --list                                  # List module names
+./install.sh                                         # Preview all modules; changes nothing
+./install.sh --module terminal,ai-agents --dry-run     # Preview selected modules
+./install.sh --module terminal,ai-agents               # Run selected modules
+./install.sh --all --dry-run                          # Preview everything
+./install.sh --all                                    # Run everything
+./install.sh --checklist                              # Complete logins and other follow-ups
+./install.sh --checklist --dry-run                    # Read-only follow-up status
+./diagnose.sh                                         # Read-only GPU, KVM and Docker diagnostics
 ```
 
-O comando gera `dist/linux-dev-setup-v0.1.7.tar.gz`, seu `.sha256` e `dist/install.sh`, usando a versão em `VERSION`. O `install.sh` remoto baixa o pacote da mesma versão publicada, confere o SHA-256, extrai em um diretório temporário e inicia o instalador. O pacote contém os scripts, módulos, configuração e documentação necessários, sem exigir um clone do repositório. Sem `--repo`, o build gera apenas o pacote e o checksum. Para criar um release, faça commit, publique este projeto em um repositório GitHub e envie uma tag que corresponda ao `VERSION`:
+`--interactive` selects modules by number. `0` selects all; `q` exits. Docker Desktop and Flatpak/Zen have additional menu choices. Existing tools are generally retained; AI CLI migration and repository repairs are deliberate exceptions.
+
+Never run `sudo ./install.sh`. Review every plan before executing it. `--yes` skips the initial yes/no question, **but cannot bypass the explicit `apply` confirmation for changes**. Runs without a controlling terminal cannot apply changes. Android terms/licenses and tool authentication remain interactive.
+
+### Modules
+
+| Module | Installs or configures |
+|---|---|
+| `system` | Git, Git LFS, GitHub CLI, Lazygit; curl, wget, zip/unzip, build-essential, jq, ripgrep, fd, fzf, bat, eza, htop, btop, tree, OpenSSH client, rsync, Vim. |
+| `terminal` | Zsh, GNU Stow, Zellij, Starship, Zsh autosuggestions/syntax highlighting, Warp; Ghostty on supported Ubuntu 26.04. Manages Zsh configuration and offers changing the login shell. |
+| `javascript` | mise, Node LTS, pnpm and Bun. Activates mise in Bash. TypeScript remains a project dependency. |
+| `docker` | Docker Desktop when the base OS and KVM support it; KVM modules/group access if needed. Engine, CLI, containerd, Compose and Buildx are an explicit fallback only. |
+| `editors` | Vim and Google Antigravity IDE. |
+| `ai-agents` | Standalone Claude Code, Codex and OpenCode; Gemini CLI in a stable npm prefix using active Node 20+. Antigravity CLI, Claude Desktop and ChatGPT Desktop where supported. Migrates old mise npm CLI copies. |
+| `local-llms` | Ollama and its systemd service, llama.cpp with Vulkan where supported; Vulkan tools, Mesa Vulkan drivers, pciutils, zstd as needed. Downloads no models. |
+| `android` | Existing JDK or OpenJDK 17; Android Studio, Command-line Tools, Platform Tools, newest stable Android platform/Build Tools, SDK environment and KVM setup. SDK licenses require approval. |
+| `applications` | Flatpak/Flathub and Zen; Vivaldi, Chrome, Tailscale, DBeaver, Bruno, Slack. Retains validated vendor repositories and cleans up redundant script-owned browser sources. |
+| `productivity` | GNOME Tweaks and Extension Manager on GNOME; KDE Connect and Restic. Snapshot layout, backup destination and retention remain manual. |
+
+Availability depends on OS, repositories, architecture and existing installations. Unsupported choices appear as manual steps rather than being silently substituted.
+
+### Settings
+
+Edit `config/settings.conf` or set variables for one invocation:
 
 ```bash
-git add .
-git commit -m "Prepare v0.1.7 release"
-git push -u origin main
-git tag v0.1.7
-git push origin v0.1.7
+INSTALL_DOCKER_DESKTOP=0 INSTALL_FLATPAK=0 ./install.sh --all --dry-run
+INSTALL_DOCKER_ENGINE_FALLBACK=1 ./install.sh --module docker --dry-run
 ```
 
-O workflow em `.github/workflows/release.yml` roda os testes e monta o pacote a cada push em `main`. Ao enviar uma tag correspondente a `VERSION`, ele publica os três arquivos no GitHub Release. Para novas versões, altere `VERSION`, faça commit, confirme que o workflow passou em `main` e crie a tag. Se preferir publicar manualmente, carregue os três arquivos de `dist/` como assets do release.
+Defaults: Docker Desktop and Flatpak enabled; Docker Engine fallback disabled. Engine fallback checks for conflicting container packages and does not remove them automatically. Essential packages are listed in `config/packages.conf`.
 
-Depois de publicado, o comando de uma linha usa o `install.sh` do release mais recente:
+## Repairs, installation methods, and updates
 
-```bash
-curl -fsSL https://github.com/italomlp/linux-dev-setup/releases/latest/download/install.sh | bash
-```
+- APT is preferred for system packages. Official signed repositories are added where required; no Snap is used. APT refuses transactions that remove existing packages.
+- Development runtimes stay in mise, allowing project-specific versions. Claude/Codex/OpenCode use official standalone installers; their commands are exposed in `~/.local/bin`.
+- Gemini uses `npm install --global --prefix "$HOME/.local/share/linux-dev-setup/npm" @google/gemini-cli`. Its stable launcher uses whichever Node is active. No extra Node is installed by the AI module and npm's global configuration is unchanged. Select Node 20+ before running Gemini.
+- Rerunning `terminal,ai-agents` repairs Warp sources and migrates version-specific CLI copies. Old AI npm packages are removed from existing mise Node prefixes only after replacement verification. Authentication/settings are retained. Open a new terminal afterward.
+- Official downloads use published digests/signatures when available. ChatGPT Desktop and Antigravity IDE use HTTPS and package/archive validation without a published checksum. Native CLI installers handle their own downloads. See [methods, trust boundaries and effects](docs/tooling.md).
 
-Sem argumentos, esse comando abre o menu interativo em um terminal. Para passar opções, use, por exemplo, `curl -fsSL https://github.com/italomlp/linux-dev-setup/releases/latest/download/install.sh | bash -s -- --module javascript --dry-run`.
+To update: use APT normally, `flatpak update --user`, or `mise upgrade` as appropriate. Claude uses its native updater; repeat the official Codex installer for Codex; use `opencode upgrade` for OpenCode. For Gemini, repeat the npm command with the explicit prefix above. A rerun verifies existing installations and installs missing tools; it is not a general upgrade command.
 
-Em outra máquina Linux, também é possível baixar o release manualmente:
+## Changes that need your approval
 
-```bash
-REPO=italomlp/linux-dev-setup
-VERSION=v0.1.7
-curl -fLO "https://github.com/$REPO/releases/download/$VERSION/linux-dev-setup-$VERSION.tar.gz"
-curl -fLO "https://github.com/$REPO/releases/download/$VERSION/linux-dev-setup-$VERSION.tar.gz.sha256"
-sha256sum -c "linux-dev-setup-$VERSION.tar.gz.sha256"
-tar -xzf "linux-dev-setup-$VERSION.tar.gz"
-cd "linux-dev-setup-$VERSION"
-./install.sh --interactive
-```
+Before execution, the installer lists changing actions and requires you to type **`apply` in a terminal**. This includes package/repository changes, replacement of managed shell configuration or binaries, removal of legacy AI packages, and the OS changes below. Declining cancels before planned actions run. `--yes` does not grant this approval.
 
-Confira o plano antes de confirmar a instalação. Os passos acima não exigem Git na máquina de destino.
+| Effect | Protection / recovery |
+|---|---|
+| Add APT sources, keys and packages; package scripts may start services or change dependencies. | Plan and explicit approval; `--no-remove` rejects package removals. Package installation itself is not automatically rolled back. |
+| Remove redundant installer-owned Warp, Claude Desktop, Chrome or Vivaldi APT sources. | Retain the vendor source; require the corresponding vendor checks; source backups in `~/.local/state/linux-dev-setup/repo-backups/`. Warp repair also runs after Warp installation. |
+| Replace managed blocks in `.bashrc`, `.zshrc`, `.profile`; replace user commands/symlinks. | Existing shell files receive adjacent `.backup.TIMESTAMP` copies. Configuration outside managed blocks is retained. User binaries are not all backed up. |
+| Uninstall the four old AI npm packages from mise Node prefixes. | Verify replacements first; preserve credentials/settings and unrelated npm packages. No Node versions are deleted. |
+| Load KVM modules; add your user to `kvm`; change the login shell with `chsh`. | Explicit approval; shell change may require a password. Group/shell changes may need a new login. No automatic `docker` group membership. |
+| Install Ollama files under `/usr`, create its service account, grant render/video access, enable/start `ollama.service`. | Explicit approval. Existing service definition is retained; existing Ollama commands normally skip installation. To stop the installed service later: `sudo systemctl disable --now ollama`. |
 
-## Exemplo de dry-run
+No partition formatting, bootloader changes, automatic reboots, container/volume deletion or snapshot-layout changes are planned. The installer also does not configure backups or download LLM models. Vendor installers and package maintainer scripts remain an external trust boundary; review the plan and sources before approval.
 
-```text
-Linux Dev Setup  Dry run
-------------------------------------------------------------
-System: ubuntu 24.04 | base: noble | architecture: x86_64 | desktop: GNOME
+## After running
 
-Will install:  (2)
-  - Node.js LTS via mise — User install; no APT Node or NVM
-      operation: mise use -g node@lts
-  - Android Command-line Tools — Verify Google ZIP against published SHA-256; accept download terms interactively
+Use `./install.sh --checklist` for logins and license follow-ups. Checklist confirmations for tools without a reliable probe are stored in `~/.local/state/linux-dev-setup/checklist.done`, without credentials. Start Docker Desktop and accept its terms before selecting its `desktop-linux` context; it has separate containers/images/volumes from Engine's `default` context.
 
-Will configure:  (1)
-  - Android SDK packages — Use SDK Manager for Platform Tools, newest stable platform and Build Tools; prompt for licenses
-```
+Logs are stored with mode `0600` in `~/.local/state/linux-dev-setup/`. A failed action skips its dependents; independent actions can continue. Fix the reported cause and rerun the relevant module. There is no full-system rollback. Local dry-run creates no persistent installation state and makes no network requests; the release launcher must download the release before its dry-run.
 
-As categorias `Already installed`, `Will install`, `Will configure`, `Skipped`, `Manual intervention` e `Notes` aparecem conforme o estado encontrado. `Will update` e `Unsupported` são reservadas para futuras operações; a versão atual não atualiza aplicativos já instalados nem remove pacotes. O dry-run do instalador local não cria logs, dotfiles, caches ou repositórios e não faz acesso à rede. O método remoto precisa baixar e verificar o pacote antes de iniciar esse dry-run. Consultas locais como `dpkg-query`, `apt-cache`, `command -v` e `flatpak info` são usadas para detectar o estado.
-
-## O que é automatizado
-
-- Pacotes disponíveis nos repositórios APT já configurados, inclusive ferramentas essenciais e utilitários do desktop.
-- Repositórios assinados do GitHub CLI, Warp, Claude Desktop, Docker, Vivaldi, Chrome, Tailscale, DBeaver e Bruno quando compatíveis.
-- mise via `extrepo`, Node LTS, pnpm e Bun via mise; CLIs de IA standalone; Gemini via npm em prefixo estável com Node ativo.
-- Flatpak e o remoto Flathub do usuário; Zen Browser pelo ID oficial `app.zen_browser.zen`.
-- Blocos limitados para Zsh, Bash e Android em arquivos do usuário, com cópia de segurança antes de alterar arquivos existentes.
-- Downloads oficiais e verificados de Slack, Docker Desktop, Android Studio, Lazygit, Zellij, Starship, Antigravity IDE/CLI, ChatGPT Desktop, Ollama e llama.cpp. O instalador verifica assinaturas ou checksums publicados quando disponíveis; Antigravity IDE e ChatGPT Desktop não publicam checksum nessas páginas e são baixados por HTTPS com validação do formato.
-
-As escolhas por ferramenta e links oficiais estão em [docs/tooling.md](docs/tooling.md). O script não atualiza uma instalação existente por conta própria. Reexecute para instalar componentes que faltavam; para atualização, use o gerenciador que instalou cada ferramenta.
-
-## Etapas manuais
-
-Docker Desktop baixa o `.deb` e `checksums.txt` da versão mais recente nas notas oficiais, confere SHA-256, configura o repositório APT e instala. Para usar um arquivo já baixado, `DOCKER_DESKTOP_DEB` e `DOCKER_DESKTOP_SHA256` ainda podem ser informados. Se a CPU expõe `svm` ou `vmx` mas `/dev/kvm` falta, o plano carrega os módulos KVM com `sudo modprobe` e verifica o dispositivo. Se o kernel registra KVM mas o dispositivo está oculto pelo ambiente atual, o plano indica o isolamento de `/dev` e não tenta alterar módulos ou instalar Engine. Uma ACL pode conceder acesso ao dispositivo mesmo sem participação no grupo `kvm`. Quando `svm`/`vmx` não é exposto ao Linux, habilite SVM/AMD-V ou VT-x no firmware, reinicie e repita `./diagnose.sh`. O Engine usa a suite Ubuntu `noble` somente após opt-in explícito e quando não há Desktop nem KVM. Docker Desktop cria o contexto `desktop-linux`, separado de `default`.
-
-Android Studio baixa automaticamente o tarball Linux e o SHA-256 publicados pelo Google. O instalador também baixa e verifica o ZIP oficial de Command-line Tools, reutiliza um SDK existente e usa `sdkmanager` para Platform Tools, plataforma estável mais recente e Build Tools estáveis. A aceitação dos termos de download e das licenças ocorre em um terminal interativo; execuções sem terminal deixam essa etapa para `--checklist`. O perfil recebe `ANDROID_HOME` somente após a verificação das ferramentas. ADB não é instalado por APT. Para um arquivo Studio já baixado, use `ANDROID_STUDIO_TARBALL` e `ANDROID_STUDIO_SHA256`.
-
-Quando os navegadores criam seus próprios repositórios assinados, o instalador verifica esses repositórios antes de fazer backup e remover apenas os arquivos redundantes `linux-dev-setup-google-chrome.list` e `linux-dev-setup-vivaldi.list`. O dry-run mostra essa limpeza antes de qualquer alteração.
-
-O módulo Terminal atualiza o bloco gerenciado de `~/.zshrc` com backup, mantendo a configuração externa. Em execução interativa, `chsh` pode solicitar senha; em execução sem terminal, a mudança de shell fica como etapa manual. Um novo login aplica o shell padrão.
-
-Docker Desktop usa o contexto `desktop-linux` e imagens/volumes separados do Engine nativo (`default`). Antes de usar os dois, confira `docker context ls`. Não há parada automática de daemons, alteração de portas, volumes, diretório de dados ou inclusão automática no grupo `docker`. O grupo `docker` dá privilégios equivalentes a root; a decisão deve ser consciente.
-
-## Verificação depois da instalação
-
-```bash
-git --version && gh --version && rg --version
-mise --version && mise exec node@lts -- node --version
-mise exec node@lts -- npm --version
-docker context ls && docker compose version && docker buildx version
-flatpak info app.zen_browser.zen
-vulkaninfo --summary
-java -version && adb version
-```
-
-Para Docker Engine: `sudo docker info`. Para Desktop, inicie o aplicativo, aceite os termos, então use `docker context use desktop-linux` e `docker info`. Para Ollama: depois de carregar voluntariamente um modelo, use `ollama ps` e examine o processador. O instalador baixa o pacote base e configura o serviço, sem pacote ROCm nem modelos. Para llama.cpp, ele usa o release Ubuntu Vulkan verificado; execute `llama-cli --list-devices`. Nenhum modelo é baixado pelo instalador.
-
-`./diagnose.sh` reúne GPU, VRAM (quando exposta por sysfs), Vulkan, KVM, backends locais e contextos Docker em uma consulta somente leitura.
-
-## Testes e limites
+## Test and build a release
 
 ```bash
 bash tests/run.sh
-for file in install.sh diagnose.sh scripts/*.sh scripts/*.in lib/*.sh modules/*.sh config/*.conf tests/run.sh; do bash -n "$file" || exit; done
-shellcheck install.sh lib/*.sh modules/*.sh tests/run.sh
+bash scripts/package.sh --repo italomlp/linux-dev-setup
 ```
 
-Os testes usam metadados falsos de distribuição e cobrem parser, módulos, dry-run e distribuição não suportada. Não instalam pacotes. O dry-run e parte das instalações reais foram verificados no Linux Mint 22.3; outros ambientes ainda exigem verificação própria.
-
-Suporte de terceiros não é igual a suporte da distribuição: no Linux Mint, o script usa o repositório Docker para a versão Ubuntu base, embora Docker não teste derivados Ubuntu/Debian. Ghostty usa o pacote Ubuntu oficial somente quando disponível no Ubuntu 26.04. `apt-cache` sem índices atualizados pode classificar um pacote como manual; execute `sudo apt-get update` fora do instalador e repita o dry-run. O instalador não modifica partições, bootloader, Btrfs, drivers, configurações do Warp/Ghostty/Antigravity ou navegador padrão. Ele não inicia serviços explicitamente; pacotes APT podem ativar serviços durante a instalação.
-
-## Manutenção
-
-Antes de rodar novamente, revise `./install.sh --all --dry-run`. Atualize pacotes APT com o ciclo normal da distribuição, Flatpaks com `flatpak update --user`, ferramentas mise com `mise upgrade`, e aplicativos de download manual seguindo seus canais oficiais. Verifique periodicamente os IDs, repositórios e requisitos em [docs/tooling.md](docs/tooling.md); métodos de instalação mudam.
-
-Logs de execução real ficam em `~/.local/state/linux-dev-setup/`, com permissão `0600`. O dry-run não cria esse diretório. Se uma ação falhar, as seguintes independentes continuam e o resumo indica falhas e dependências puladas. Corrija o problema e reexecute o módulo.
-
-### Reparar Warp e migrar CLIs de IA
-
-Revise e execute novamente, como usuário normal:
-
-```bash
-./install.sh --module terminal,ai-agents --dry-run
-./install.sh --module terminal,ai-agents
-```
-
-A fonte APT criada pelo Warp é preservada. Se houver uma fonte redundante `linux-dev-setup-warp.list`, ela será validada, copiada para `~/.local/state/linux-dev-setup/repo-backups/` e removida antes de operações APT; o mesmo ocorre após instalar Warp.
-
-Claude Code, Codex e OpenCode usam os instaladores standalone oficiais, com comandos expostos em `~/.local/bin`. Gemini usa `npm install --global --prefix ~/.local/share/linux-dev-setup/npm @google/gemini-cli`, com launcher estável em `~/.local/bin/gemini`. O launcher usa o Node ativo (20+); projetos com Node incompatível precisam selecionar uma versão suportada. O módulo de IA não instala Node nem altera a configuração global do npm.
-
-O rerun verifica as novas instalações antes de desinstalar somente os quatro pacotes antigos dos prefixos Node existentes no mise. Credenciais e configurações são preservadas. Se a substituição falhar, a instalação antiga permanece. Abra um novo terminal após a migração; Bash e Zsh mantêm o diretório estável no PATH mesmo após a ativação do mise.
-
-Atualizações: Claude usa seu atualizador nativo; Codex pode ser atualizado repetindo o instalador oficial (`https://chatgpt.com/codex/install.sh`); OpenCode usa `opencode upgrade`; Gemini usa o comando npm com o prefixo explícito acima. Um rerun verifica instalações existentes, sem forçar atualização de versão.
+Tests use temporary fixtures and mocked installation commands. The build reads `VERSION` and writes the archive, checksum, and launcher to `dist/`. The GitHub workflow tests pushes and publishes those three assets when a `vVERSION` tag is pushed. Version 0.2.0 uses tag `v0.2.0`.

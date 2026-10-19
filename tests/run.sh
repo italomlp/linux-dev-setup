@@ -76,6 +76,7 @@ out=$(ROOT="$ROOT" TMP="$TMP" bash -c '
   run_action() { [[ $1 != repo-tools ]]; }
   add_action install prerequisite repo-tools "" - ""
   add_action install dependent apt example 0 ""
+  confirm_planned_changes() { :; }
   execute_plan || true
   printf "results=%s,%s" "${ACTION_RESULT[0]}" "${ACTION_RESULT[1]}"
 ')
@@ -141,7 +142,7 @@ out=$(ROOT="$ROOT" MOCK_ROOT="$TMP" bash -c '
   }
   run_action docker-desktop auto
 ')
-check docker-verified-before-apt 'sudo:apt-get install -y' "$out"
+check docker-verified-before-apt 'sudo:apt-get install --no-remove -y' "$out"
 printf '%064d *docker-desktop-amd64.deb\n' 0 > "$TMP/mock-docker-sums.txt"
 out=$(ROOT="$ROOT" MOCK_ROOT="$TMP" bash -c '
   source "$ROOT/lib/package-manager.sh"
@@ -407,6 +408,7 @@ if cat "$TMP/dist/install.sh" | PATH="$TMP/bin:$PATH" MOCK_CORRUPT=1 bash -s -- 
   fail 'bootstrap accepted invalid checksum'
 fi
 check bootstrap-checksum 'FAILED' "$(cat "$TMP/out")"
+bash "$ROOT/tests/confirmation.sh"
 bash "$ROOT/tests/cli-repair.sh"
 bash "$ROOT/tests/desktop-setup.sh"
 bash "$ROOT/tests/ui.sh"
