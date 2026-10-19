@@ -29,6 +29,14 @@ bash linux-dev-setup-launcher.sh --interactive --dry-run
 bash linux-dev-setup-launcher.sh --interactive
 ```
 
+Para instalar com um comando de uma linha, execute o launcher diretamente:
+
+```bash
+curl -fsSL https://github.com/italomlp/linux-dev-setup/releases/download/v0.2.0/install.sh | bash
+```
+
+Isso abre o menu de módulos, verifica o arquivo do release e pede aprovação antes de aplicar alterações. Para apenas simular, substitua `bash` por `bash -s -- --interactive --dry-run`.
+
 ## Executar pelo código-fonte (sem baixar release)
 
 ```bash

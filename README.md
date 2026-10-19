@@ -29,6 +29,14 @@ bash linux-dev-setup-launcher.sh --interactive --dry-run
 bash linux-dev-setup-launcher.sh --interactive
 ```
 
+For a one-line installation, run the release launcher directly:
+
+```bash
+curl -fsSL https://github.com/italomlp/linux-dev-setup/releases/download/v0.2.0/install.sh | bash
+```
+
+This opens the module menu, verifies the release archive, and asks for approval before applying changes. To preview only, replace `bash` with `bash -s -- --interactive --dry-run`.
+
 ## Run from source (no release download)
 
 ```bash
