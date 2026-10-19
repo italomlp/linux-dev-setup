@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 plan_applications() {
+  plan_browser_repo_cleanup
   if (( INSTALL_FLATPAK )); then
     local flatpak_dep=- flathub_dep=-
     if has_command flatpak; then add_action installed Flatpak none '' - 'Existing installation retained'
@@ -36,4 +37,14 @@ plan_applications() {
     local slack_policy_dep=$((${#ACTION_TYPE[@]}-1))
     add_action install Slack slack-deb '' "$slack_policy_dep" 'download official .deb, verify Slack signature, install with APT'
   fi
+}
+plan_browser_repo_cleanup() {
+  local name label file
+  for name in google-chrome vivaldi; do
+    file="$(apt_source_dir)/linux-dev-setup-$name.list"
+    [[ -f $file ]] || continue
+    vendor_repo_valid "$name" || continue
+    case $name in google-chrome) label='Google Chrome';; vivaldi) label=Vivaldi;; esac
+    add_action configure "$label repository cleanup" browser-repo-cleanup "$name" - 'Back up and remove redundant installer source; retain vendor source and signing key'
+  done
 }

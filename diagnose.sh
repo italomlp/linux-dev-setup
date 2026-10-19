@@ -26,7 +26,8 @@ fi
 if [[ -e /dev/kvm ]]; then
   ls -l /dev/kvm
   [[ -r /dev/kvm && -w /dev/kvm ]] && printf '  Current user can access KVM\n' || printf '  Current user lacks KVM read/write access\n'
-else printf '  /dev/kvm unavailable\n'; fi
+elif [[ -e /sys/class/misc/kvm/dev ]]; then printf '  KVM is registered by the kernel but /dev/kvm is hidden in this device namespace\n'
+else printf '  /dev/kvm unavailable; check kernel modules and firmware virtualization\n'; fi
 printf '\nInference:\n'
 if command -v ollama >/dev/null 2>&1; then ollama ps 2>&1 || true
 else printf '  Ollama unavailable\n'; fi

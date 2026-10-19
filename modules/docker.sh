@@ -2,7 +2,10 @@
 plan_docker() {
   local kvm_dep=- kvm_module=''
   kvm_module=$(cpu_kvm_module || true)
-  if (( INSTALL_DOCKER_DESKTOP )) && ! has_kvm && [[ -n $kvm_module ]]; then
+  local kvm_status; kvm_status=$(kvm_state)
+  if (( INSTALL_DOCKER_DESKTOP )) && [[ $kvm_status == hidden ]]; then
+    plan_manual 'Docker Desktop KVM device namespace' 'KVM is registered by the kernel but /dev/kvm is hidden in this environment; run the installer on the host or expose the device'
+  elif (( INSTALL_DOCKER_DESKTOP )) && ! has_kvm && [[ -n $kvm_module ]]; then
     kvm_dep=${#ACTION_TYPE[@]}
     add_action configure 'Load KVM modules' kvm-setup "$kvm_module" - 'sudo modprobe; verify /dev/kvm; add user to kvm group only if needed; new login may be required'
   elif (( INSTALL_DOCKER_DESKTOP )) && has_kvm && ! kvm_access; then
@@ -29,16 +32,16 @@ plan_docker() {
       fi
       add_action install 'Docker Desktop' docker-desktop auto "$repo_index" 'download official .deb and checksum from Docker release notes; verify SHA-256 before APT installation'
     fi
-  elif (( INSTALL_DOCKER_DESKTOP )); then
+  elif (( INSTALL_DOCKER_DESKTOP )) && [[ $kvm_status != hidden ]]; then
     if [[ -z $kvm_module ]]; then
       plan_manual 'Docker Desktop requires KVM' 'CPU virtualization flag svm/vmx is not exposed to Linux. Enable SVM/AMD-V or VT-x in firmware (or expose nested virtualization), reboot, then rerun; diagnose.sh shows details.'
     else
       plan_manual 'Docker Desktop requires KVM' 'Check /dev/kvm and user permissions; run diagnose.sh. Docker Desktop cannot start until KVM works.'
     fi
-  else add_action skipped 'Docker Desktop' none '' - 'Disabled in settings'; fi
+  elif (( ! INSTALL_DOCKER_DESKTOP )); then add_action skipped 'Docker Desktop' none '' - 'Disabled in settings'; fi
   if package_installed docker-ce || package_installed docker.io; then
     add_action installed 'Docker CLI / Engine' none docker - 'Existing Engine package retained; inspect docker context ls'
-  elif (( INSTALL_DOCKER_ENGINE_FALLBACK )) && [[ $kvm_dep == - ]] && ! package_installed docker-desktop && ! has_kvm && ! package_installed containerd && ! package_installed runc && ! package_installed podman-docker && [[ $BASE_CODENAME == noble || $BASE_CODENAME == jammy || $BASE_CODENAME == resolute ]]; then
+  elif (( INSTALL_DOCKER_ENGINE_FALLBACK )) && [[ $kvm_status == missing && $kvm_dep == - ]] && ! package_installed docker-desktop && ! package_installed containerd && ! package_installed runc && ! package_installed podman-docker && [[ $BASE_CODENAME == noble || $BASE_CODENAME == jammy || $BASE_CODENAME == resolute ]]; then
     local repo_index=-
     if repo_present docker; then
       add_action installed 'Docker repository' none '' - 'Existing APT source retained'
@@ -51,7 +54,7 @@ plan_docker() {
     for package in docker-ce docker-ce-cli containerd.io docker-compose-plugin docker-buildx-plugin; do
       add_action install "$package" apt "$package" "$repo_index" 'sudo; Docker official APT repository'
     done
-  else
+  elif [[ $kvm_status != hidden ]]; then
     plan_note 'Explicit Engine fallback' 'If KVM cannot be enabled, opt in with INSTALL_DOCKER_ENGINE_FALLBACK=1; uses Docker official Ubuntu APT source with the noble base on Mint. Review conflicts first.'
   fi
   if has_command docker; then

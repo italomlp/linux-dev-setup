@@ -45,7 +45,7 @@ cd "$ROOT"
 # Keep the release contents explicit: local files and credentials cannot leak into it.
 files=(
   VERSION README.md install.sh diagnose.sh
-  config/*.conf lib/*.sh modules/*.sh scripts/resolve-download.py docs/tooling.md
+  config/*.conf lib/*.sh modules/*.sh scripts/resolve-download.py scripts/checklist-terminal.sh docs/tooling.md
 )
 for file in "${files[@]}"; do
   [[ -f "$ROOT/$file" ]] || { echo "Missing package file: $file" >&2; exit 1; }

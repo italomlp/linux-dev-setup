@@ -66,6 +66,7 @@ describe_action() {
   case $type in
     apt) printf 'sudo apt-get update; sudo apt-get install -y %q' "$arg";;
     repo) printf 'configure signed %s APT repository (sudo)' "$arg";;
+    browser-repo-cleanup) printf 'back up and remove redundant installer-owned %s APT source (sudo)' "$arg";;
     repo-tools) printf 'sudo apt-get install -y ca-certificates curl gnupg';;
     slack-signature) printf 'configure Slack debsig verification key and policy';;
     slack-deb) printf 'download official Slack .deb, verify package signature, install with APT';;
@@ -77,6 +78,8 @@ describe_action() {
     shell-bash) printf 'backup and append managed block to ~/.bashrc';;
     android-env) printf 'backup and append managed block to ~/.profile';;
     android-studio) if [[ $arg == auto ]]; then printf 'download Google Linux tarball and published SHA-256; verify; launch Setup Wizard'; else printf 'verify SHA-256 and extract Android Studio tarball; launch Setup Wizard'; fi;;
+    android-cli) printf 'download Google Command-line Tools ZIP, verify SHA-256 and install in %q' "$arg";;
+    android-sdk-packages) printf 'install Platform Tools, newest stable platform and Build Tools in %q using sdkmanager' "$arg";;
     docker-desktop) if [[ $arg == auto ]]; then printf 'download official .deb and checksum; verify SHA-256; sudo apt-get install'; else printf 'verify SHA-256 and sudo apt-get install official Docker Desktop .deb'; fi;;
     login-zsh) printf 'chsh -s %q (interactive)' "$arg";;
     release-tar) printf 'verify official archive SHA-256 and install %q in ~/.local/bin' "${arg%%:*}";;

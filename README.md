@@ -13,6 +13,8 @@ Instalador Bash modular para um desktop x86_64 com Ubuntu, Debian, Zorin OS, Pop
 ./install.sh --module javascript,docker,ai-agents --dry-run
 ./install.sh --all
 ./install.sh --module android --yes
+./install.sh --checklist --dry-run
+./install.sh --checklist
 ```
 
 Sem argumentos, o script faz dry-run de todos os módulos. Com `--interactive`, um menu permite escolher módulos por número (separados por vírgula), todos com `0`, ou sair com `q`. Ao escolher Docker ou Applications, o menu também pergunta se deve incluir Docker Desktop ou Flatpak e Zen. O plano é mostrado antes da execução; sem `--dry-run`, o instalador pede uma confirmação final. `--yes` permite execução sem essa confirmação. O script deve ser iniciado como usuário normal; ele solicita `sudo` somente para ações de sistema. Não execute com `sudo ./install.sh`.
@@ -20,6 +22,8 @@ Sem argumentos, o script faz dry-run de todos os módulos. Com `--interactive`, 
 Módulos: `system`, `terminal`, `javascript`, `docker`, `editors`, `ai-agents`, `local-llms`, `android`, `applications`, `productivity`.
 
 `config/settings.conf` permite desligar Docker Desktop ou Flatpak com `INSTALL_DOCKER_DESKTOP=0` e `INSTALL_FLATPAK=0`. Docker Engine é apenas um fallback explícito: `INSTALL_DOCKER_ENGINE_FALLBACK=1` quando KVM não está disponível. `config/packages.conf` lista os pacotes essenciais. No módulo `ai-agents`, a dependência mise/Node é planejada automaticamente se estiver ausente.
+
+`--checklist --dry-run` mostra o estado de autenticação detectável e a ação exata de cada ferramenta, sem abrir aplicativos ou gravar progresso. `--checklist` guia um item por vez, abre um terminal para CLIs ou o aplicativo gráfico e reavalia o estado depois. Para aplicativos sem verificação confiável, a confirmação manual é salva em `~/.local/state/linux-dev-setup/checklist.done`. Credenciais não são copiadas para esse arquivo.
 
 ## Pacote para GitHub Releases
 
@@ -73,8 +77,11 @@ Will install:
   - Node.js LTS via mise — User install; no APT Node or NVM
       operation: mise use -g node@lts
 
-Manual intervention:
-  - Android Studio Setup Wizard — Complete first-run setup and accept SDK licenses
+Will install:
+  - Android Command-line Tools — Verify Google ZIP against published SHA-256; accept download terms interactively
+
+Will configure:
+  - Android SDK packages — Use SDK Manager for Platform Tools, newest stable platform and Build Tools; prompt for licenses
 ```
 
 As categorias `Already installed`, `Will install`, `Will configure`, `Skipped`, `Manual intervention` e `Notes` aparecem conforme o estado encontrado. `Will update` e `Unsupported` são reservadas para futuras operações; a versão atual não atualiza aplicativos já instalados nem remove pacotes. O dry-run do instalador local não cria logs, dotfiles, caches ou repositórios e não faz acesso à rede. O método remoto precisa baixar e verificar o pacote antes de iniciar esse dry-run. Consultas locais como `dpkg-query`, `apt-cache`, `command -v` e `flatpak info` são usadas para detectar o estado.
@@ -92,9 +99,11 @@ As escolhas por ferramenta e links oficiais estão em [docs/tooling.md](docs/too
 
 ## Etapas manuais
 
-Docker Desktop baixa o `.deb` e `checksums.txt` da versão mais recente nas notas oficiais, confere SHA-256, configura o repositório APT e instala. Para usar um arquivo já baixado, `DOCKER_DESKTOP_DEB` e `DOCKER_DESKTOP_SHA256` ainda podem ser informados. Se a CPU expõe `svm` ou `vmx` mas `/dev/kvm` falta, o plano carrega os módulos KVM com `sudo modprobe` e verifica o dispositivo. Se for preciso adicionar seu usuário ao grupo `kvm`, encerre a sessão e entre novamente antes de repetir o instalador. Quando `svm`/`vmx` não é exposto ao Linux, habilite SVM/AMD-V ou VT-x no firmware, reinicie e repita `./diagnose.sh`; o script não pode alterar o firmware. O Engine usa a suite Ubuntu `noble` somente após opt-in explícito e quando não há Desktop nem KVM. Docker Desktop cria o contexto `desktop-linux`, separado de `default`.
+Docker Desktop baixa o `.deb` e `checksums.txt` da versão mais recente nas notas oficiais, confere SHA-256, configura o repositório APT e instala. Para usar um arquivo já baixado, `DOCKER_DESKTOP_DEB` e `DOCKER_DESKTOP_SHA256` ainda podem ser informados. Se a CPU expõe `svm` ou `vmx` mas `/dev/kvm` falta, o plano carrega os módulos KVM com `sudo modprobe` e verifica o dispositivo. Se o kernel registra KVM mas o dispositivo está oculto pelo ambiente atual, o plano indica o isolamento de `/dev` e não tenta alterar módulos ou instalar Engine. Uma ACL pode conceder acesso ao dispositivo mesmo sem participação no grupo `kvm`. Quando `svm`/`vmx` não é exposto ao Linux, habilite SVM/AMD-V ou VT-x no firmware, reinicie e repita `./diagnose.sh`. O Engine usa a suite Ubuntu `noble` somente após opt-in explícito e quando não há Desktop nem KVM. Docker Desktop cria o contexto `desktop-linux`, separado de `default`.
 
-Android Studio baixa automaticamente o tarball Linux e o SHA-256 publicados pelo Google. Depois complete o Setup Wizard, instale SDK Platform Tools e Android SDK Command-line Tools no SDK Manager e aceite as licenças. Uma nova execução detecta `ANDROID_HOME`, `ANDROID_SDK_ROOT` ou `~/Android/Sdk`, configurando `~/.profile` para o SDK encontrado. ADB não é instalado por APT. Para um arquivo já baixado, use `ANDROID_STUDIO_TARBALL` e `ANDROID_STUDIO_SHA256`.
+Android Studio baixa automaticamente o tarball Linux e o SHA-256 publicados pelo Google. O instalador também baixa e verifica o ZIP oficial de Command-line Tools, reutiliza um SDK existente e usa `sdkmanager` para Platform Tools, plataforma estável mais recente e Build Tools estáveis. A aceitação dos termos de download e das licenças ocorre em um terminal interativo; execuções sem terminal deixam essa etapa para `--checklist`. O perfil recebe `ANDROID_HOME` somente após a verificação das ferramentas. ADB não é instalado por APT. Para um arquivo Studio já baixado, use `ANDROID_STUDIO_TARBALL` e `ANDROID_STUDIO_SHA256`.
+
+Quando os navegadores criam seus próprios repositórios assinados, o instalador verifica esses repositórios antes de fazer backup e remover apenas os arquivos redundantes `linux-dev-setup-google-chrome.list` e `linux-dev-setup-vivaldi.list`. O dry-run mostra essa limpeza antes de qualquer alteração.
 
 O módulo Terminal atualiza o bloco gerenciado de `~/.zshrc` com backup, mantendo a configuração externa. Em execução interativa, `chsh` pode solicitar senha; em execução sem terminal, a mudança de shell fica como etapa manual. Um novo login aplica o shell padrão.
 

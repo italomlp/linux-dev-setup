@@ -6,15 +6,17 @@ source "$ROOT/lib/planning.sh"
 source "$ROOT/lib/logging.sh"
 source "$ROOT/lib/package-manager.sh"
 source "$ROOT/lib/interactive.sh"
+source "$ROOT/lib/checklist.sh"
 source "$ROOT/config/settings.conf"
 MODULES=(system terminal javascript docker editors ai-agents local-llms android applications productivity)
 usage() { cat <<'EOF'
 Usage: ./install.sh [--interactive | --all | --module name[,name...]] [--dry-run] [--yes]
+       ./install.sh --checklist [--dry-run]
        ./install.sh --list | --help
 Dry-run is the default when no selection is given.
 EOF
 }
-DRY_RUN=0; YES=0; INTERACTIVE=0; SELECTED=()
+DRY_RUN=0; YES=0; INTERACTIVE=0; CHECKLIST=0; SELECTED=()
 if (( $# == 0 )); then DRY_RUN=1; fi
 while (( $# )); do
   case $1 in
@@ -22,6 +24,7 @@ while (( $# )); do
     --list) printf '%s\n' "${MODULES[@]}"; exit 0;;
     --all) SELECTED=("${MODULES[@]}");;
     --interactive) INTERACTIVE=1;;
+    --checklist) CHECKLIST=1;;
     --module)
       (( $# >= 2 )) || { echo '--module requires a value' >&2; exit 2; }
       IFS=, read -ra names <<< "$2"
@@ -32,6 +35,13 @@ while (( $# )); do
   esac
   shift
 done
+if (( CHECKLIST )); then
+  if (( INTERACTIVE || YES )) || [[ -n ${SELECTED[*]-} ]]; then
+    echo '--checklist cannot be combined with module selection, --interactive or --yes' >&2; exit 2
+  fi
+  run_checklist "$DRY_RUN"
+  exit $?
+fi
 if (( INTERACTIVE )) && [[ -n ${SELECTED[*]-} ]]; then
   echo '--interactive cannot be combined with --all or --module' >&2; exit 2
 fi

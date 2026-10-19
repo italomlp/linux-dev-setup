@@ -86,6 +86,22 @@ def android(path):
     return links[0] + '\t' + checksum.group() + '\t' + filename.group()
 
 
+def android_cli(path):
+    html = Path(path).read_text()
+    name = re.search(r'commandlinetools-linux-[0-9]+_latest\.zip', html)
+    if not name:
+        fail('Google page has no Linux command-line tools archive')
+    rows = re.findall(r'<tr\b[^>]*>.*?</tr>', html, re.S)
+    row = next((item for item in rows if name.group() in item), '')
+    checksum = re.search(r'\b[0-9a-f]{64}\b', row)
+    if not checksum:
+        fail('Google page has no command-line tools SHA-256')
+    links = set(re.findall(r'https://dl\.google\.com/android/repository/' + re.escape(name.group()), html))
+    if len(links) != 1:
+        fail('Google page has no unique command-line tools URL')
+    return links.pop() + '\t' + checksum.group() + '\t' + name.group()
+
+
 def antigravity_ide(path):
     html = Path(path).read_text()
     links = re.findall(r'https://edgedl\.me\.gvt1\.com/edgedl/release2/[^"<> ]+/linux-x64/Antigravity%20IDE\.tar\.gz', html)
@@ -171,6 +187,8 @@ if __name__ == '__main__':
         print(github_product(*args))
     elif mode == 'android' and len(args) == 1:
         print(android(*args))
+    elif mode == 'android-cli' and len(args) == 1:
+        print(android_cli(*args))
     elif mode == 'antigravity-ide' and len(args) == 1:
         print(antigravity_ide(*args))
     elif mode == 'antigravity-response' and len(args) == 1:

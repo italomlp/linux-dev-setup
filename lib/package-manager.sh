@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
 APT_REFRESHED=0
+android_stable_packages() {
+  local listing platform build
+  listing=$(cat)
+  platform=$(printf '%s\n' "$listing" | sed -nE 's/^[[:space:]]*(platforms;android-[0-9]+(\.[0-9]+)?)[[:space:]]*\|.*/\1/p' | sort -V | tail -1)
+  build=$(printf '%s\n' "$listing" | sed -nE 's/^[[:space:]]*(build-tools;[0-9]+\.[0-9]+\.[0-9]+)[[:space:]]*\|.*/\1/p' | sort -V | tail -1)
+  [[ -n $platform && -n $build ]] || return 1
+  printf '%s\n%s\n' "$platform" "$build"
+}
 refresh_apt() {
   if (( ! APT_REFRESHED )); then sudo apt-get update || return 1; APT_REFRESHED=1; fi
 }
@@ -185,6 +193,16 @@ repair_claude_repo() {
 run_action() {
   local type=$1 arg=$2
   case $type in
+    browser-repo-cleanup)
+      vendor_repo_valid "$arg" || { echo 'Vendor repository is not verified; retaining installer source' >&2; return 1; }
+      local source_file="$(apt_source_dir)/linux-dev-setup-$arg.list"
+      [[ -f $source_file ]] || return 0
+      local backup_dir="$HOME/.local/state/linux-dev-setup/repo-backups"
+      mkdir -p "$backup_dir"
+      cp -p "$source_file" "$backup_dir/$(basename "$source_file").$(date +%Y%m%d-%H%M%S)"
+      sudo rm -- "$source_file"
+      APT_REFRESHED=0
+      refresh_apt;;
     apt)
       refresh_apt || return 1
       sudo apt-get install -y "$arg" || return
@@ -222,7 +240,47 @@ run_action() {
       zsh -n "$HOME/.zshrc";;
     shell-bash) append_shell_block "$HOME/.bashrc" $'export PATH="$HOME/.local/bin:$PATH"\ncommand -v mise >/dev/null && eval "$(mise activate bash)"';;
     android-env)
+      [[ -x $arg/platform-tools/adb && -x $arg/cmdline-tools/latest/bin/sdkmanager ]] || { echo 'Android SDK tools are incomplete' >&2; return 1; }
       replace_shell_block "$HOME/.profile" "export ANDROID_HOME=\"$arg\""$'\nexport PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"';;
+    android-cli)
+      [[ ! -x $arg/cmdline-tools/latest/bin/sdkmanager ]] || return 0
+      if [[ ! -t 0 || ! -w /dev/tty ]]; then echo 'Google SDK download terms require interactive acceptance; run the checklist' >&2; return 3; fi
+      printf 'Review Google SDK terms at https://developer.android.com/studio before downloading. Accept them? [y/N] ' >/dev/tty
+      local reply; IFS= read -r reply </dev/tty
+      [[ $reply == y || $reply == Y ]] || return 3
+      (
+        set -Eeuo pipefail
+        local tmp url sha name archive
+        tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+        curl -fsSL --retry 3 https://developer.android.com/studio -o "$tmp/studio.html"
+        IFS=$'\t' read -r url sha name < <(python3 "$ROOT/scripts/resolve-download.py" android-cli "$tmp/studio.html")
+        [[ $url == https://dl.google.com/android/repository/* && $sha =~ ^[0-9a-f]{64}$ ]] || return 1
+        archive="$tmp/$name"
+        curl -fsSL --retry 3 "$url" -o "$archive"
+        printf '%s  %s\n' "$sha" "$archive" | sha256sum -c -
+        unzip -tq "$archive" >/dev/null
+        unzip -q "$archive" -d "$tmp/unpacked"
+        [[ -x $tmp/unpacked/cmdline-tools/bin/sdkmanager && -f $tmp/unpacked/cmdline-tools/source.properties ]] || return 1
+        mkdir -p "$arg/cmdline-tools"
+        [[ ! -e $arg/cmdline-tools/latest ]] || return 1
+        mv "$tmp/unpacked/cmdline-tools" "$arg/cmdline-tools/latest"
+      );;
+    android-sdk-packages)
+      local manager="$arg/cmdline-tools/latest/bin/sdkmanager" java_home='' listing platform build
+      [[ -x $manager ]] || return 1
+      if [[ -x $HOME/.local/share/android-studio/jbr/bin/java ]]; then java_home="$HOME/.local/share/android-studio/jbr"; fi
+      if [[ ! -t 0 || ! -w /dev/tty ]]; then echo 'SDK licenses require an interactive terminal; run the checklist' >&2; return 3; fi
+      if [[ -n $java_home ]]; then JAVA_HOME=$java_home "$manager" --sdk_root="$arg" --licenses </dev/tty >/dev/tty 2>&1 || return 1
+      else "$manager" --sdk_root="$arg" --licenses </dev/tty >/dev/tty 2>&1 || return 1; fi
+      if [[ -n $java_home ]]; then listing=$(JAVA_HOME=$java_home "$manager" --sdk_root="$arg" --list --channel=0)
+      else listing=$("$manager" --sdk_root="$arg" --list --channel=0); fi
+      local -a stable_packages=()
+      mapfile -t stable_packages < <(printf '%s\n' "$listing" | android_stable_packages)
+      platform=${stable_packages[0]:-}; build=${stable_packages[1]:-}
+      [[ -n $platform && -n $build ]] || { echo 'No stable Android platform or Build Tools found' >&2; return 1; }
+      if [[ -n $java_home ]]; then JAVA_HOME=$java_home "$manager" --sdk_root="$arg" --install platform-tools "$platform" "$build" </dev/tty >/dev/tty 2>&1
+      else "$manager" --sdk_root="$arg" --install platform-tools "$platform" "$build" </dev/tty >/dev/tty 2>&1; fi
+      [[ -x $arg/platform-tools/adb && -d $arg/${platform//;/\/} && -d $arg/${build//;/\/} ]] || return 1;;
     android-studio)
       (
         set -Eeuo pipefail
@@ -425,6 +483,7 @@ EOF
         "$HOME/.local/bin/$arg" --version
       );;
     kvm-setup)
+      if declare -F kvm_state >/dev/null && [[ $(kvm_state) == hidden ]]; then echo 'KVM is registered but hidden in this device namespace' >&2; return 1; fi
       if ! has_kvm; then
         [[ $arg == kvm_amd || $arg == kvm_intel ]] || return 1
         sudo modprobe kvm
@@ -459,7 +518,7 @@ execute_plan() {
     else
       local rc=$?
       if (( rc == 3 )); then
-        ACTION_RESULT[i]=deferred; ((skipped+=1)); log_line "FOLLOW-UP ${ACTION_TITLE[i]}: sign out and back in, then rerun"
+        ACTION_RESULT[i]=deferred; ((skipped+=1)); log_line "FOLLOW-UP ${ACTION_TITLE[i]}: complete the interactive step and rerun or use --checklist"
       else
         ACTION_RESULT[i]=failed; ((failed+=1)); log_line "FAIL ${ACTION_TITLE[i]} (see log)"
       fi

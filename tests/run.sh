@@ -281,14 +281,15 @@ out=$(DS_TEST_KVM=missing DS_TEST_CPU_VIRT=none INSTALL_DOCKER_ENGINE_FALLBACK=1
 check engine-opt-in 'docker-ce' "$out"
 out=$(bash "$ROOT/install.sh" --module android --dry-run)
 [[ $out != *'sudo apt-get install -y adb'* ]] || fail 'duplicate ADB planned'
-check wizard-pending 'Android Studio Setup Wizard' "$out"
+check sdk-commandline-pending 'Android Command-line Tools' "$out"
+check sdk-packages-pending 'Android SDK packages' "$out"
 check android-auto 'download verified Android Studio tarball' "$out"
 mkdir -p "$HOME/custom-sdk/platform-tools" "$HOME/custom-sdk/cmdline-tools/latest/bin"
 touch "$HOME/custom-sdk/platform-tools/adb" "$HOME/custom-sdk/cmdline-tools/latest/bin/sdkmanager"
 chmod +x "$HOME/custom-sdk/platform-tools/adb" "$HOME/custom-sdk/cmdline-tools/latest/bin/sdkmanager"
 out=$(ANDROID_SDK_ROOT="$HOME/custom-sdk" bash "$ROOT/install.sh" --module android --dry-run)
-check sdk-detection 'Android SDK at' "$out"
-[[ $out != *'Android Studio Setup Wizard'* ]] || fail 'wizard incorrectly pending with valid SDK'
+check sdk-detection 'Existing SDK manager retained' "$out"
+[[ $out != *'Will install:'*'Android Command-line Tools'* ]] || fail 'command-line tools incorrectly pending with valid SDK'
 cat > "$HOME/.zshrc" <<'EOF'
 # user configuration
 # linux-dev-setup managed block
@@ -355,6 +356,7 @@ out=$(tar -tzf "$archive")
 check package-installer "linux-dev-setup-v$version/install.sh" "$out"
 check package-modules "linux-dev-setup-v$version/modules/javascript.sh" "$out"
 check package-resolver "linux-dev-setup-v$version/scripts/resolve-download.py" "$out"
+check package-checklist-terminal "linux-dev-setup-v$version/scripts/checklist-terminal.sh" "$out"
 [[ $out != *'.git/'* ]] || fail 'archive contains git metadata'
 if command -v sha256sum >/dev/null 2>&1; then
   (cd "$TMP/dist" && sha256sum -c "$(basename "$archive").sha256") >/dev/null
@@ -395,4 +397,5 @@ if cat "$TMP/dist/install.sh" | PATH="$TMP/bin:$PATH" MOCK_CORRUPT=1 bash -s -- 
   fail 'bootstrap accepted invalid checksum'
 fi
 check bootstrap-checksum 'FAILED' "$(cat "$TMP/out")"
+bash "$ROOT/tests/desktop-setup.sh"
 printf 'All tests passed\n'
