@@ -24,7 +24,7 @@ ID_LIKE="rhel fedora"
 EOF
 export DS_TEST_MODE=1 DS_TEST_ARCH=x86_64 HOME="$TMP/home" XDG_CONFIG_HOME="$TMP/home/.config"
 unset ANDROID_HOME ANDROID_SDK_ROOT
-export DS_TEST_FORCE_MISSING=lazygit,zellij,starship,zsh,zsh-autosuggestions,zsh-syntax-highlighting,docker,docker-desktop,docker-ce,docker.io,containerd,runc,podman-docker,agy,agy-ide,antigravity-ide,claude-desktop,chatgpt,ollama,llama-cli,vivaldi,vivaldi-stable,google-chrome,google-chrome-stable,tailscale
+export DS_TEST_FORCE_MISSING=lazygit,zellij,starship,zsh,zsh-autosuggestions,zsh-syntax-highlighting,docker,docker-desktop,docker-ce,docker.io,containerd,runc,podman-docker,agy,code,claude-desktop,chatgpt,ollama,llama-cli,vivaldi,vivaldi-stable,google-chrome,google-chrome-stable,tailscale
 export DS_TEST_IGNORE_REPOS=1
 if [[ -e /etc/apt/sources.list.d/claude-desktop.list && -e /etc/apt/sources.list.d/linux-dev-setup-claude-desktop.list ]]; then
   mkdir -p "$TMP/apt-sources"
@@ -168,46 +168,6 @@ cat > "$TMP/android.html" <<'EOF'
 EOF
 out=$(python3 "$ROOT/scripts/resolve-download.py" android "$TMP/android.html")
 check android-resolve 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc' "$out"
-cat > "$TMP/antigravity.html" <<'EOF'
-<!DOCTYPE html><html><body>
-<a href="https://edgedl.me.gvt1.com/edgedl/release2/abc/antigravity/stable/1/linux-x64/Antigravity%20IDE.tar.gz">IDE</a>
-</body></html>
-EOF
-out=$(python3 "$ROOT/scripts/resolve-download.py" antigravity-ide "$TMP/antigravity.html")
-check antigravity-resolve 'Antigravity%20IDE.tar.gz' "$out"
-gzip -c "$TMP/antigravity.html" > "$TMP/antigravity.html.gz"
-check antigravity-html-gzip 'html-gzip' "$(python3 "$ROOT/scripts/resolve-download.py" antigravity-response "$TMP/antigravity.html.gz")"
-mkdir -p "$TMP/antigravity-fixture/Antigravity IDE" "$TMP/antigravity-home"
-printf '#!/bin/sh\nexit 0\n' > "$TMP/antigravity-fixture/Antigravity IDE/antigravity-ide"
-chmod 755 "$TMP/antigravity-fixture/Antigravity IDE/antigravity-ide"
-tar -C "$TMP/antigravity-fixture" -czf "$TMP/antigravity-direct.tar.gz" 'Antigravity IDE'
-check antigravity-archive 'archive' "$(python3 "$ROOT/scripts/resolve-download.py" antigravity-response "$TMP/antigravity-direct.tar.gz")"
-out=$(ROOT="$ROOT" MOCK_ROOT="$TMP" HOME="$TMP/antigravity-home" bash -c '
-  source "$ROOT/lib/package-manager.sh"
-  curl() {
-    local dst=""
-    while (( $# )); do case $1 in -o) dst=$2; shift 2;; *) shift;; esac; done
-    cp "$MOCK_ROOT/antigravity-direct.tar.gz" "$dst"
-  }
-  run_action antigravity-ide ""
-  [[ -x $HOME/.local/share/antigravity-ide/antigravity-ide ]] && echo installed
-')
-check antigravity-direct-download installed "$out"
-out=$(ROOT="$ROOT" MOCK_ROOT="$TMP" HOME="$TMP/antigravity-html-home" bash -c '
-  source "$ROOT/lib/package-manager.sh"
-  curl() {
-    local dst="" url=""
-    while (( $# )); do case $1 in -o) dst=$2; shift 2;; -*) shift;; *) url=$1; shift;; esac; done
-    case $url in
-      https://antigravity.google/download) cp "$MOCK_ROOT/antigravity.html.gz" "$dst";;
-      *Antigravity%20IDE.tar.gz) cp "$MOCK_ROOT/antigravity-direct.tar.gz" "$dst";;
-      *) return 1;;
-    esac
-  }
-  run_action antigravity-ide ""
-  [[ -x $HOME/.local/share/antigravity-ide/antigravity-ide ]] && echo installed
-')
-check antigravity-gzip-html-download installed "$out"
 python3 - "$TMP/unsafe.tar.gz" <<'PY'
 import io, sys, tarfile
 with tarfile.open(sys.argv[1], 'w:gz') as archive:
@@ -215,7 +175,7 @@ with tarfile.open(sys.argv[1], 'w:gz') as archive:
     item.size = 1
     archive.addfile(item, io.BytesIO(b'x'))
 PY
-if python3 "$ROOT/scripts/resolve-download.py" tar-root "$TMP/unsafe.tar.gz" 'Antigravity IDE' >"$TMP/out" 2>&1; then fail 'unsafe tar path accepted'; fi
+if python3 "$ROOT/scripts/resolve-download.py" tar-root "$TMP/unsafe.tar.gz" 'fixture-root' >"$TMP/out" 2>&1; then fail 'unsafe tar path accepted'; fi
 cat > "$TMP/chatgpt.html" <<'EOF'
 <a href="https://persistent.oaistatic.com/codex-app-prod/linux/deb/latest/chatgpt_amd64.deb">Download .deb for x64</a>
 EOF
@@ -256,14 +216,8 @@ check tailscale-auto 'tailscale repository' "$out"
 check chrome-auto 'google-chrome repository' "$out"
 check vivaldi-auto 'vivaldi repository' "$out"
 out=$(DS_TEST_OS_RELEASE="$TMP/mint" bash "$ROOT/install.sh" --module editors,ai-agents --dry-run)
-check antigravity-ide-auto 'download official Antigravity IDE' "$out"
+check vscode-auto 'Visual Studio Code' "$out"
 check antigravity-cli-auto 'download verified Antigravity CLI' "$out"
-mkdir -p "$HOME/.local/bin"
-printf '#!/bin/sh\nexit 1\n' > "$HOME/.local/bin/antigravity-ide"
-chmod 755 "$HOME/.local/bin/antigravity-ide"
-out=$(DS_TEST_FORCE_MISSING=lazygit,zellij,starship,docker,docker-desktop,agy,agy-ide,claude-desktop,ollama,llama-cli PATH="$HOME/.local/bin:$PATH" bash "$ROOT/install.sh" --module editors --dry-run)
-check antigravity-broken-wrapper 'Will install:' "$out"
-check antigravity-broken-wrapper-plan 'Google Antigravity IDE' "$out"
 out=$(DS_TEST_OS_RELEASE="$TMP/mint" bash "$ROOT/install.sh" --module local-llms --dry-run)
 check llama-auto 'download verified llama.cpp Vulkan release' "$out"
 check ollama-auto 'download verified Ollama release' "$out"
@@ -409,6 +363,7 @@ if cat "$TMP/dist/install.sh" | PATH="$TMP/bin:$PATH" MOCK_CORRUPT=1 bash -s -- 
 fi
 check bootstrap-checksum 'FAILED' "$(cat "$TMP/out")"
 bash "$ROOT/tests/confirmation.sh"
+bash "$ROOT/tests/editors.sh"
 bash "$ROOT/tests/cli-repair.sh"
 bash "$ROOT/tests/desktop-setup.sh"
 bash "$ROOT/tests/ui.sh"

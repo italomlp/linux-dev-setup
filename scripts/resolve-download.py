@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Extract narrowly scoped download metadata from official vendor responses."""
 import json
-import gzip
 import re
 import sys
 import tarfile
@@ -102,26 +101,6 @@ def android_cli(path):
     return links.pop() + '\t' + checksum.group() + '\t' + name.group()
 
 
-def antigravity_ide(path):
-    html = Path(path).read_text()
-    links = re.findall(r'https://edgedl\.me\.gvt1\.com/edgedl/release2/[^"<> ]+/linux-x64/Antigravity%20IDE\.tar\.gz', html)
-    if not links:
-        fail('No official Antigravity IDE Linux x64 archive found')
-    return links[0]
-
-
-def antigravity_response(path):
-    with open(path, 'rb') as response:
-        raw = response.read(512)
-    if raw.startswith(b'\x1f\x8b'):
-        with gzip.open(path, 'rb') as response:
-            prefix = response.read(512)
-        if prefix.startswith(b'Antigravity IDE/'):
-            return 'archive'
-        return 'html-gzip'
-    return 'html'
-
-
 def chatgpt(path):
     html = Path(path).read_text()
     links = re.findall(r'https://persistent\.oaistatic\.com/codex-app-prod/linux/deb/[^"<> ]+/chatgpt_amd64\.deb', html)
@@ -189,10 +168,6 @@ if __name__ == '__main__':
         print(android(*args))
     elif mode == 'android-cli' and len(args) == 1:
         print(android_cli(*args))
-    elif mode == 'antigravity-ide' and len(args) == 1:
-        print(antigravity_ide(*args))
-    elif mode == 'antigravity-response' and len(args) == 1:
-        print(antigravity_response(*args))
     elif mode == 'chatgpt' and len(args) == 1:
         print(chatgpt(*args))
     elif mode == 'slack-deb' and len(args) == 1:

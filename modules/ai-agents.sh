@@ -7,7 +7,7 @@ plan_ai_agents() {
     case $binary in claude) title='Claude Code';; codex) title='OpenAI Codex CLI';; opencode) title=OpenCode;; gemini) title='Gemini CLI';; esac
     add_action install "$title" ai-cli "$binary" "$path_dep" 'Verify stable user installation; migrate old mise npm copies only after success; Gemini uses active Node'
   done
-  if has_command agy || has_command agy-ide; then add_action installed 'Antigravity CLI' none '' - 'Existing installation retained'
+  if has_command agy; then add_action installed 'Antigravity CLI' none '' - 'Existing installation retained'
   else add_action install 'Antigravity CLI' antigravity-cli '' - 'download verified Antigravity CLI using vendor SHA-512 manifest'; fi
   if has_command claude-desktop || package_installed claude-desktop; then
     add_action installed 'Claude Desktop' none '' - 'Existing installation retained'

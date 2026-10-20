@@ -25,6 +25,8 @@ Depending on the actions listed above, this can:
   * Back up/remove redundant installer-owned APT sources (including after Warp installation).
   * Replace managed shell/profile blocks and user executables; back up existing shell files.
   * Remove legacy AI npm packages only after verifying their replacements; retain credentials.
+  * Install VS Code through Microsoft's package, including its desktop/login handlers and
+    package-managed signed APT repository for updates. Extension/account setup is in --checklist.
   * Change the login shell; load KVM modules or add the current user to the kvm group.
   * Install Ollama under /usr, create its service account/groups, and enable/start its service.
 Only the planned actions run. No partitions, bootloader, or model data are intentionally removed.

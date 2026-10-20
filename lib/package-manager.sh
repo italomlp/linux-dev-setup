@@ -368,35 +368,19 @@ run_action() {
         refresh_apt; sudo apt-get install --no-remove -y "$tmp/chatgpt_amd64.deb"
         has_command chatgpt
       );;
-    antigravity-ide)
+    vscode-deb)
       (
         set -Eeuo pipefail
-        local tmp url target response_kind
+        local tmp
         tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
-        curl -fsSL --compressed --retry 3 https://antigravity.google/download -o "$tmp/download" || return 1
-        response_kind=$(python3 "$ROOT/scripts/resolve-download.py" antigravity-response "$tmp/download") || return 1
-        if [[ $response_kind == archive ]]; then
-          mv "$tmp/download" "$tmp/antigravity-ide.tar.gz"
-        else
-          if [[ $response_kind == html-gzip ]]; then
-            gzip -cd "$tmp/download" > "$tmp/download.html" || return 1
-          else
-            mv "$tmp/download" "$tmp/download.html"
-          fi
-          url=$(python3 "$ROOT/scripts/resolve-download.py" antigravity-ide "$tmp/download.html") || return 1
-          [[ -n $url ]] || return 1
-          curl -fsSL --retry 3 "$url" -o "$tmp/antigravity-ide.tar.gz" || return 1
-        fi
-        python3 "$ROOT/scripts/resolve-download.py" tar-root "$tmp/antigravity-ide.tar.gz" 'Antigravity IDE' || return 1
-        tar -tzf "$tmp/antigravity-ide.tar.gz" | grep -Fx 'Antigravity IDE/antigravity-ide' >/dev/null || return 1
-        target="$HOME/.local/share/antigravity-ide"
-        [[ ! -e $target ]] || return 1
-        tar -xzf "$tmp/antigravity-ide.tar.gz" -C "$tmp" || return 1
-        mkdir -p "$HOME/.local/share" "$HOME/.local/bin"
-        mv "$tmp/Antigravity IDE" "$target" || return 1
-        printf '#!/usr/bin/env bash\nexec "%s/antigravity-ide" "$@"\n' "$target" > "$HOME/.local/bin/antigravity-ide"
-        chmod 755 "$HOME/.local/bin/antigravity-ide"
-        [[ -x $target/antigravity-ide ]]
+        curl -fsSL --retry 3 https://update.code.visualstudio.com/latest/linux-deb-x64/stable -o "$tmp/code_amd64.deb" || return 1
+        [[ $(dpkg-deb -f "$tmp/code_amd64.deb" Package) == code ]] || return 1
+        [[ $(dpkg-deb -f "$tmp/code_amd64.deb" Architecture) == amd64 ]] || return 1
+        # Official noninteractive opt-in: the package manages its own signed repository.
+        printf 'code code/add-microsoft-repo boolean true\n' | sudo debconf-set-selections || return 1
+        refresh_apt || return 1
+        sudo apt-get install --no-remove -y "$tmp/code_amd64.deb" || return 1
+        has_command code
       );;
     antigravity-cli)
       (

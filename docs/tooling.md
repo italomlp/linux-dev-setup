@@ -22,7 +22,7 @@ The installer plans before executing. It normally retains existing tools, uses d
 | Codex CLI | Official [standalone installer](https://learn.chatgpt.com/docs/codex/cli), `https://chatgpt.com/codex/install.sh`. Forces `CODEX_INSTALL_DIR=~/.local/bin` for a stable command. |
 | OpenCode | Official [standalone installer](https://dev.opencode.ai/v2/docs), `https://opencode.ai/v2/install`, with `--no-modify-path`. Links its `~/.opencode/bin/opencode` into `~/.local/bin`. |
 | Gemini CLI | Official [npm package](https://geminicli.com/docs/get-started/installation/), explicit prefix `~/.local/share/linux-dev-setup/npm`. Stable launcher calls the active Node and requires Node 20+. No new runtime or persistent npm-prefix setting. |
-| Antigravity IDE / CLI | Official HTTPS tarball; CLI verifies vendor SHA-512 manifest. IDE has no checksum published by the download page. See [vendor downloads](https://antigravity.google/download). |
+| Antigravity CLI | Official CLI archive verified against the vendor SHA-512 manifest; installed as `~/.local/bin/agy`. Standalone Antigravity IDE and app are not installed. |
 | Claude Desktop | Official signed APT source, published fingerprint verified. Supported Ubuntu/Debian versions are checked; Ubuntu derivatives use detected base compatibility without claiming vendor support. See [vendor guidance](https://support.claude.com/en/articles/10065433-install-claude-desktop). |
 | ChatGPT Desktop | Official HTTPS `.deb`, validated package name/architecture. No checksum published on the download page. Base-version compatibility checks apply. See [Linux app](https://learn.chatgpt.com/docs/linux/linux-app). |
 | Ollama | Official GitHub Linux release, GitHub asset SHA-256 verified; installs under `/usr` and enables a systemd service. No models or separate ROCm package downloaded. See [Linux installation](https://docs.ollama.com/linux). |
@@ -62,3 +62,18 @@ No partition formatting, bootloader changes, automatic reboot, snapshot-layout c
 ## Optional pre-downloaded packages
 
 `DOCKER_DESKTOP_DEB` plus `DOCKER_DESKTOP_SHA256`, and `ANDROID_STUDIO_TARBALL` plus `ANDROID_STUDIO_SHA256`, allow verified local archives. `LAZYGIT_ARCHIVE`/`LAZYGIT_SHA256`, `STARSHIP_ARCHIVE`/`STARSHIP_SHA256` and `ZELLIJ_ARCHIVE`/`ZELLIJ_SHA256` similarly select fallback archives. Supply both path and the matching official digest, then inspect `--dry-run`.
+
+### VS Code and Antigravity setup
+
+The editors module installs the stable Microsoft `.deb` from `https://update.code.visualstudio.com/latest/linux-deb-x64/stable`, validates the package name (`code`) and architecture (`amd64`), opts into the package's signed APT repository using `code/add-microsoft-repo`, and installs through APT with `--no-remove`. This follows [Microsoft's Ubuntu instructions](https://code.visualstudio.com/docs/setup/linux). The package supplies its icon, desktop entry, sandbox and `vscode://` login handler; this project does not recreate them. Existing VS Code installations are retained. Updates use the package-managed APT source; no duplicate installer repository is added. The download is trusted through Microsoft's HTTPS endpoint and package metadata validation, without an independently pinned checksum.
+
+After installation, run `bash install.sh --checklist`:
+
+1. **VS Code account review:** open Accounts and sign in with Microsoft/GitHub if desired. Settings Sync is optional; select what to sync yourself. Mark this review complete to unlock the next step. This is a user confirmation, not a token-based authentication check.
+2. **Antigravity extension:** selecting this step installs `google.google-antigravity` through `code --install-extension` for the current user's default local VS Code profile. It verifies the exact ID with `code --list-extensions` and skips an already installed extension. Failed installation remains pending.
+
+   To authenticate, run `agy` in a terminal and complete its browser login, then run **Developer: Reload Window** in VS Code. The CLI and extension share local authentication, as described in [Google’s authentication guide](https://antigravity.google/docs/install/). There is no separate VS Code authentication checklist step; extension installation status does not verify account sign-in.
+
+See the [official Google VS Code extension guide](https://antigravity.google/docs/ide/extensions/vscode), [Marketplace listing](https://marketplace.visualstudio.com/items?itemName=Google.google-antigravity), [Microsoft CLI documentation](https://code.visualstudio.com/docs/configure/command-line), and [Settings Sync guide](https://code.visualstudio.com/docs/configure/settings-sync). Google documents that the extension installs a local `agy` backend on first launch. The separately installed `~/.local/bin/agy` CLI is retained. Neither standalone Antigravity IDE nor Antigravity app is installed.
+
+The installer requires its normal explicit `apply` approval before installing the system package and enabling package-managed APT updates. The checklist installs the extension only when its step is selected, after account review. It does not log in, enable Settings Sync, remove existing VS Code extensions, or edit credentials. Tests mock package/extension installation and verify step ordering and failure handling; successful browser authentication remains a manual check. Removing older IDE files is a separate, explicit user-requested cleanup, not an automatic side effect of rerunning the installer.

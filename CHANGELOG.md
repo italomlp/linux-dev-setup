@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.1
+
+- Replace standalone Antigravity IDE installation with Microsoft's official VS Code Debian package, retaining package-managed desktop integration and signed APT updates.
+- Keep the standalone `agy` CLI; remove the IDE downloader and checklist entry. Neither standalone Antigravity IDE nor Antigravity app is installed.
+- Add two ordered VS Code checklist steps: account review and verified Google Antigravity extension installation. Document signing in through `agy`, followed by reloading VS Code, within step 2.
+- Block extension setup until account review, retain failed installation as pending, and skip reinstalling an existing extension.
+- Update English and Brazilian Portuguese instructions, installation sources, side effects, and release commands; add mocked VS Code package and checklist regression tests.
+
 ## 0.2.0
 
 - Repair duplicate Warp APT sources before package operations and after Warp installation, retaining the vendor source and backing up the redundant installer source.

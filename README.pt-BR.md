@@ -6,14 +6,14 @@ Instalador Bash modular para desktops x86_64 com Ubuntu, Debian, Linux Mint, Pop
 
 ## Executar pelo release (sem Git)
 
-Você precisa de Bash, curl, tar, Python 3 e `sha256sum`. Baixe, verifique e extraia a versão **0.2.0**:
+Você precisa de Bash, curl, tar, Python 3 e `sha256sum`. Baixe, verifique e extraia a versão **0.2.1**:
 
 ```bash
-curl -fLO https://github.com/italomlp/linux-dev-setup/releases/download/v0.2.0/linux-dev-setup-v0.2.0.tar.gz
-curl -fLO https://github.com/italomlp/linux-dev-setup/releases/download/v0.2.0/linux-dev-setup-v0.2.0.tar.gz.sha256
-sha256sum -c linux-dev-setup-v0.2.0.tar.gz.sha256 && \
-  tar -xzf linux-dev-setup-v0.2.0.tar.gz && \
-  cd linux-dev-setup-v0.2.0 && \
+curl -fLO https://github.com/italomlp/linux-dev-setup/releases/download/v0.2.1/linux-dev-setup-v0.2.1.tar.gz
+curl -fLO https://github.com/italomlp/linux-dev-setup/releases/download/v0.2.1/linux-dev-setup-v0.2.1.tar.gz.sha256
+sha256sum -c linux-dev-setup-v0.2.1.tar.gz.sha256 && \
+  tar -xzf linux-dev-setup-v0.2.1.tar.gz && \
+  cd linux-dev-setup-v0.2.1 && \
   ./install.sh --interactive --dry-run && \
   ./install.sh --interactive
 ```
@@ -23,7 +23,7 @@ Continue somente se o checksum mostrar `OK`. Ele detecta corrupção, mas vem do
 Outra opção é baixar o launcher, inspecioná-lo e executá-lo. Ele baixa e verifica automaticamente o release correspondente:
 
 ```bash
-curl -fL https://github.com/italomlp/linux-dev-setup/releases/download/v0.2.0/install.sh -o linux-dev-setup-launcher.sh
+curl -fL https://github.com/italomlp/linux-dev-setup/releases/download/v0.2.1/install.sh -o linux-dev-setup-launcher.sh
 less linux-dev-setup-launcher.sh
 bash linux-dev-setup-launcher.sh --interactive --dry-run
 bash linux-dev-setup-launcher.sh --interactive
@@ -32,7 +32,7 @@ bash linux-dev-setup-launcher.sh --interactive
 Para instalar com um comando de uma linha, execute o launcher diretamente:
 
 ```bash
-curl -fsSL https://github.com/italomlp/linux-dev-setup/releases/download/v0.2.0/install.sh | bash
+curl -fsSL https://github.com/italomlp/linux-dev-setup/releases/download/v0.2.1/install.sh | bash
 ```
 
 Isso abre o menu de módulos, verifica o arquivo do release e pede aprovação antes de aplicar alterações. Para apenas simular, substitua `bash` por `bash -s -- --interactive --dry-run`.
@@ -46,7 +46,7 @@ cd linux-dev-setup
 ./install.sh --interactive
 ```
 
-Para usar exatamente o código do release, execute `git checkout v0.2.0` antes do instalador. A branch padrão pode conter alterações mais recentes.
+Para usar exatamente o código do release, execute `git checkout v0.2.1` antes do instalador. A branch padrão pode conter alterações mais recentes.
 
 ## Escolher o que instalar
 
@@ -74,7 +74,7 @@ Nunca use `sudo ./install.sh`. Revise o plano antes de executar. `--yes` pula a 
 | `terminal` | Zsh, GNU Stow, Zellij, Starship, autosuggestions/syntax highlighting, Warp; Ghostty no Ubuntu 26.04 compatível. Gerencia a configuração Zsh e oferece mudar o shell de login. |
 | `javascript` | mise, Node LTS, pnpm e Bun. Ativa mise no Bash. TypeScript fica como dependência do projeto. |
 | `docker` | Docker Desktop quando sistema-base e KVM permitem; módulos/permissões KVM quando necessário. Engine, CLI, containerd, Compose e Buildx são apenas um fallback explícito. |
-| `editors` | Vim e Google Antigravity IDE. |
+| `editors` | Vim e Visual Studio Code oficial; checklist em duas etapas para conta e extensão Google Antigravity, com instruções de login pelo `agy`. |
 | `ai-agents` | Claude Code, Codex e OpenCode standalone; Gemini CLI em prefixo npm estável usando Node ativo 20+. Antigravity CLI, Claude Desktop e ChatGPT Desktop quando compatíveis. Migra cópias npm antigas do mise. |
 | `local-llms` | Ollama e seu serviço systemd, llama.cpp com Vulkan quando compatível; Vulkan tools, drivers Mesa Vulkan, pciutils e zstd conforme necessário. Não baixa modelos. |
 | `android` | JDK existente ou OpenJDK 17; Android Studio, Command-line Tools, Platform Tools, plataforma/Build Tools estáveis mais recentes, ambiente SDK e KVM. Licenças exigem aceite. |
@@ -100,7 +100,7 @@ Padrões: Docker Desktop e Flatpak habilitados; fallback Engine desabilitado. O 
 - Runtimes de desenvolvimento ficam no mise, com versões por projeto. Claude/Codex/OpenCode usam instaladores oficiais standalone, expostos em `~/.local/bin`.
 - Gemini usa `npm install --global --prefix "$HOME/.local/share/linux-dev-setup/npm" @google/gemini-cli`. O launcher estável usa o Node ativo. O módulo de IA não instala outro Node nem altera a configuração global do npm. Selecione Node 20+ antes de usar Gemini.
 - Reexecute `terminal,ai-agents` para reparar fontes Warp e migrar CLIs. Pacotes npm antigos são removidos dos prefixos Node existentes no mise somente após verificar as substituições. Credenciais/configurações são preservadas. Abra outro terminal depois.
-- Downloads oficiais usam checksums/assinaturas publicados quando disponíveis. ChatGPT Desktop e Antigravity IDE usam HTTPS e validação do pacote/arquivo, sem checksum publicado. Instaladores nativos das CLIs gerenciam seus próprios downloads. Veja [métodos e efeitos](docs/tooling.pt-BR.md).
+- Downloads oficiais usam checksums/assinaturas publicados quando disponíveis. ChatGPT Desktop e VS Code usam HTTPS e validação do pacote, sem checksum independente publicado. Instaladores nativos das CLIs gerenciam seus próprios downloads. Veja [métodos e efeitos](docs/tooling.pt-BR.md).
 
 Para atualizar: use APT, `flatpak update --user` ou `mise upgrade`, conforme a ferramenta. Claude usa seu atualizador nativo; Codex pode ser atualizado repetindo o instalador oficial; OpenCode usa `opencode upgrade`. Para Gemini, repita o comando npm com prefixo explícito acima. Reexecutar o script verifica instalações existentes e instala o que falta; não é uma atualização geral.
 
@@ -132,4 +132,6 @@ bash tests/run.sh
 bash scripts/package.sh --repo italomlp/linux-dev-setup
 ```
 
-Testes usam diretórios temporários e comandos de instalação simulados. O build lê `VERSION` e gera arquivo, checksum e launcher em `dist/`. O workflow testa pushes e publica os três arquivos quando uma tag `vVERSION` é enviada. A versão 0.2.0 usa a tag `v0.2.0`.
+Testes usam diretórios temporários e comandos de instalação simulados. O build lê `VERSION` e gera arquivo, checksum e launcher em `dist/`. O workflow testa pushes e publica os três arquivos quando uma tag `vVERSION` é enviada. A versão 0.2.1 usa a tag `v0.2.1`.
+
+Para VS Code, `./install.sh --module editors` instala o pacote oficial da Microsoft. Depois use `./install.sh --checklist`: revise/faça login na conta do VS Code (Settings Sync é opcional), instale a extensão Google Antigravity e siga as instruções da etapa 2 para fazer login pelo `agy` e executar **Developer: Reload Window** no VS Code. Etapas posteriores ficam bloqueadas até concluir os pré-requisitos. Apenas `agy` e a extensão do VS Code são suportados; a instalação do IDE/app standalone do Antigravity foi removida. Veja [fontes e detalhes da configuração](docs/tooling.pt-BR.md#configuração-do-vs-code-e-antigravity).

@@ -19,7 +19,10 @@ checklist_catalog() {
   has_command warp-terminal && checklist_add warp Warp gui
   has_command claude-desktop && checklist_add claude-desktop 'Claude Desktop' gui
   { has_command chatgpt || package_installed chatgpt; } && checklist_add chatgpt 'ChatGPT Desktop' gui
-  { has_command antigravity-ide || [[ -x $HOME/.local/share/antigravity-ide/antigravity-ide ]]; } && checklist_add antigravity-ide 'Antigravity IDE' gui
+  if has_command code; then
+    checklist_add vscode-account 'VS Code: 1/2 account sign-in' gui
+    checklist_add vscode-extension 'VS Code: 2/2 Antigravity extension' cli
+  fi
   has_command slack && checklist_add slack Slack gui
   has_command dbeaver && checklist_add dbeaver DBeaver gui
   has_command bruno && checklist_add bruno Bruno gui
@@ -53,7 +56,8 @@ checklist_detail() {
     warp) printf 'Launch Warp for its optional account and terminal preferences.';;
     claude-desktop) printf 'Launch Claude Desktop to sign in and review first-run settings.';;
     chatgpt) printf 'Launch ChatGPT Desktop to sign in and review first-run settings.';;
-    antigravity-ide) printf 'Launch Antigravity IDE to sign in and finish IDE preferences.';;
+    vscode-account) printf 'Open VS Code Accounts; sign in with Microsoft/GitHub. Settings Sync is optional: choose data to sync yourself. Mark reviewed when finished.';;
+    vscode-extension) printf 'After reviewing VS Code account setup, install Google Antigravity (google.google-antigravity) from Marketplace and verify the extension is listed. Then run agy in a terminal to sign in, and run Developer: Reload Window in VS Code.';;
     slack) printf 'Launch Slack and sign in to a workspace.';;
     dbeaver) printf 'Launch DBeaver and configure connections only if needed.';;
     bruno) printf 'Launch Bruno and review optional collections or account setup.';;
@@ -69,6 +73,7 @@ checklist_detail() {
 }
 checklist_probed() {
   case $1 in
+    vscode-extension) code --list-extensions 2>/dev/null | grep -Fxi google.google-antigravity >/dev/null;;
     gh) gh auth status >/dev/null 2>&1;;
     claude) claude auth status 2>/dev/null | python3 -c 'import json,sys; sys.exit(0 if json.load(sys.stdin).get("loggedIn") is True else 1)' 2>/dev/null;;
     codex) codex login status >/dev/null 2>&1;;
@@ -80,8 +85,15 @@ checklist_probed() {
     *) return 2;;
   esac
 }
+checklist_blocked() {
+  case $1 in
+    vscode-extension) ! checklist_marked vscode-account;;
+    *) return 1;;
+  esac
+}
 checklist_status() {
   local id=$1 dry=$2
+  if checklist_blocked "$id"; then printf blocked; return; fi
   if checklist_probed "$id"; then printf ready; return; fi
   if [[ $id == codex && $dry == 1 && -s $HOME/.codex/auth.json ]]; then printf 'signed in locally (unverified)'; return; fi
   case $id in
@@ -89,12 +101,13 @@ checklist_status() {
       if [[ -s $HOME/.config/gh/hosts.yml ]] && grep -q 'oauth_token:' "$HOME/.config/gh/hosts.yml"; then
         printf 'configured (verification unavailable)'
       else printf pending; fi;;
-    claude|codex|tailscale|docker|android) printf pending;;
+    claude|codex|tailscale|docker|android|vscode-extension) printf pending;;
     *) if checklist_marked "$id"; then printf marked; else printf review; fi;;
   esac
 }
 checklist_launch() {
   local id=$1 kind=$2
+  if checklist_blocked "$id"; then echo "Complete the preceding VS Code checklist step first." >&2; return 1; fi
   if [[ $kind == cli ]]; then
     if has_command x-terminal-emulator; then
       x-terminal-emulator -e "$ROOT/scripts/checklist-terminal.sh" "$id" || return 1
@@ -106,7 +119,7 @@ checklist_launch() {
       warp) warp-terminal >/dev/null 2>&1 &;;
       claude-desktop) claude-desktop >/dev/null 2>&1 &;;
       chatgpt) chatgpt >/dev/null 2>&1 &;;
-      antigravity-ide) if has_command antigravity-ide; then antigravity-ide >/dev/null 2>&1 & else "${HOME}/.local/share/antigravity-ide/antigravity-ide" >/dev/null 2>&1 & fi;;
+      vscode-account) code --new-window >/dev/null 2>&1 &;;
       slack) slack >/dev/null 2>&1 &;;
       dbeaver) dbeaver >/dev/null 2>&1 &;;
       bruno) bruno >/dev/null 2>&1 &;;
@@ -141,7 +154,7 @@ run_checklist() {
     IFS= read -r answer || return 0
     state=$(checklist_status "$id" 0)
     if [[ $state != ready ]] && ! checklist_probed "$id"; then
-      case $id in gh|claude|codex|tailscale|docker|android) echo 'Still pending according to the tool';;
+      case $id in gh|claude|codex|tailscale|docker|android|vscode-extension) echo 'Still pending according to the tool';;
         *) ui_style heading 'No reliable status check. Mark this item complete? [y/N] '; IFS= read -r answer || return 0; [[ $answer == y || $answer == Y ]] && checklist_mark "$id";;
       esac
     fi

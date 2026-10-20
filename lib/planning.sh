@@ -89,7 +89,7 @@ describe_action() {
     github-release-tar) printf 'download official %q release and verify GitHub SHA-256 digest' "$arg";;
     chatgpt-deb) printf 'download official ChatGPT .deb over HTTPS; inspect package; sudo apt-get install';;
     claude-repo-repair) printf 'remove duplicate installer Claude APT source; refresh APT';;
-    antigravity-ide) printf 'download official Antigravity IDE Linux tarball over HTTPS and install for user';;
+    vscode-deb) printf 'download official VS Code .deb; validate package/architecture; enable package-managed signed APT updates; sudo apt-get install --no-remove';;
     antigravity-cli) printf 'download Antigravity CLI and verify vendor SHA-512 manifest';;
     llama-vulkan) printf 'download official Ubuntu Vulkan release and verify GitHub SHA-256 digest';;
     ollama-release) printf 'download official Linux archive, verify GitHub SHA-256 digest, install systemd service';;
@@ -120,5 +120,5 @@ print_plan() {
       fi
     done
   done
-  printf '\nPrivilege/restart: APT and repository actions request sudo; no action reboots the system. Shell/group changes may require a new login session.\n'
+  printf '\nPrivilege/restart: System package and repository actions request sudo; no action reboots the system. Shell/group changes may require a new login session.\n'
 }
